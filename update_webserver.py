@@ -252,8 +252,7 @@ def generate_page(directory, base_dir, all_filetypes, filetype=None):
 
         # Folders section
         if folders or up_link:
-            folders_header = f"Folders - {len(folders)}" if not is_index else "Folders"
-            page += f"    <h2>{folders_header}</h2>\n    <ul>\n"
+            page += f"    <h2>Folders - {len(folders)}</h2>\n    <ul>\n"
             if up_link:
                 page += f"        {up_link}        <br>\n"
             for folder in folders:
@@ -268,8 +267,7 @@ def generate_page(directory, base_dir, all_filetypes, filetype=None):
 
         # Files section
         if files:
-            files_header = f"Files - {len(files)}" if not is_index else "Files"
-            page += f"    <h2>{files_header}</h2>\n    <ul>\n"
+            page += f"    <h2>Files - {len(files)}</h2>\n    <ul>\n"
             for fname in files:
                 item_path = os.path.join(directory, fname)
                 file_size = os.path.getsize(item_path)
