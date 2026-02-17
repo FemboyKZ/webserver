@@ -5,9 +5,89 @@ from datetime import datetime, timezone
 
 # CFG
 EXCLUDE_MARKER = "EXCLUDE_FOLDER"
-IGNORED_FILETYPES = ["html", "php", "py", "sh", "js", "htaccess", "tmp", "stignore"]
+IGNORED_FILETYPES = ["html", "php", "py", "sh", "js", "css", "htaccess", "tmp", "stignore"]
 MIN_FILES_FOR_NAV = 20
 MIN_FOLDERS_FOR_NAV = 30
+
+STYLE_CSS = """
+body {
+    background-color: rgb(105, 64, 83);
+    font-family: monospace, sans-serif;
+    color: rgb(255, 80, 164);
+}
+a {
+    color: rgb(255, 80, 164);
+    text-decoration: none;
+}
+a:hover {
+    color: rgb(135, 1, 66);
+    text-decoration: underline;
+    background-color: rgb(255, 80, 164);
+}
+ul {
+    list-style-type: none;
+    padding-left: 20px;
+}
+li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.file-size {
+    display: inline-block;
+    width: 100px;
+    text-align: right;
+    margin-right: 10px;
+    color: fuchsia;
+    white-space: pre;
+}
+.file-date {
+    display: inline-block;
+    width: 140px;
+    text-align: right;
+    margin-right: 10px;
+    color: rgb(255, 150, 200);
+    white-space: pre;
+}
+""".strip()
+
+SEARCH_JS = """
+function performSearch() {
+    const query = document.getElementById("search").value.toLowerCase();
+    const items = document.querySelectorAll("li");
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(query) ? "block" : "none";
+    });
+}
+
+document.getElementById("search").addEventListener("input", performSearch);
+
+const urlParams = new URLSearchParams(window.location.search);
+const searchTerm = urlParams.get('search');
+
+if (searchTerm) {
+    const search = document.getElementById("search");
+    search.value = searchTerm;
+    performSearch();
+}
+""".strip()
+
+
+def generate_assets(base_dir):
+    """Write style.css and search.js to the base directory."""
+    css_path = os.path.join(base_dir, "style.css")
+    js_path = os.path.join(base_dir, "search.js")
+    try:
+        with open(css_path, "w") as f:
+            f.write(STYLE_CSS)
+    except OSError as e:
+        print(f"Error writing CSS file '{css_path}': {e}", file=sys.stderr)
+    try:
+        with open(js_path, "w") as f:
+            f.write(SEARCH_JS)
+    except OSError as e:
+        print(f"Error writing JS file '{js_path}': {e}", file=sys.stderr)
 
 
 def get_filetypes(directory):
@@ -75,6 +155,8 @@ def generate_html(directory, filetype, all_filetypes, base_dir):
             else MIRROR_URL + "/"
         )
 
+        assets_prefix = os.path.relpath(base_dir, directory).replace(os.path.sep, "/")
+
         items = sorted(
             os.listdir(directory),
             key=lambda x: (not os.path.isdir(os.path.join(directory, x)), x.lower()),
@@ -96,47 +178,7 @@ def generate_html(directory, filetype, all_filetypes, base_dir):
 <html>
 <head>
     <title>FKZ File Index - {MIRROR_TAG} - /{os.path.basename(os.path.abspath(directory))}/ - .{filetype.upper()}</title>
-    <style>
-        body {{
-            background-color: rgb(105, 64, 83);
-            font-family: monospace, sans-serif;
-            color: rgb(255, 80, 164);
-        }}
-        a {{
-            color: rgb(255, 80, 164);
-            text-decoration: none;
-        }}
-        a:hover {{
-            color: rgb(135, 1, 66);
-            text-decoration: underline;
-            background-color: rgb(255, 80, 164);
-        }}
-        ul {{
-            list-style-type: none;
-            padding-left: 20px;
-        }}
-        li {{
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }}
-        .file-size {{
-            display: inline-block;
-            width: 100px;
-            text-align: right;
-            margin-right: 10px;
-            color: fuchsia;
-            white-space: pre;
-        }}
-        .file-date {{
-            display: inline-block;
-            width: 140px;
-            text-align: right;
-            margin-right: 10px;
-            color: rgb(255, 150, 200);
-            white-space: pre;
-        }}
-    </style>
+    <link rel="stylesheet" href="{assets_prefix}/style.css">
     <link rel="shortcut icon" href="https://files.femboy.kz/web/images/fucker.ico">
 </head>
 <body>
@@ -213,28 +255,8 @@ def generate_html(directory, filetype, all_filetypes, base_dir):
                     """
             html += "</ul>\n"
 
-        html += """
-    <script>
-        function performSearch() {
-            const query = document.getElementById("search").value.toLowerCase();
-            const items = document.querySelectorAll("li");
-            items.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                item.style.display = text.includes(query) ? "block" : "none";
-            });
-        }
-
-        document.getElementById("search").addEventListener("input", performSearch);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const searchTerm = urlParams.get('search');
-  
-        if (searchTerm) {
-            const search = document.getElementById("search");
-            search.value = searchTerm;
-            performSearch();
-        }
-    </script>
+        html += f"""
+    <script src="{assets_prefix}/search.js"></script>
 </body>
 </html>
         """
@@ -266,6 +288,8 @@ def generate_index(directory, all_filetypes, base_dir):
             else MIRROR_URL + "/"
         )
 
+        assets_prefix = os.path.relpath(base_dir, directory).replace(os.path.sep, "/")
+
         items = sorted(
             os.listdir(directory),
             key=lambda x: (not os.path.isdir(os.path.join(directory, x)), x.lower()),
@@ -294,47 +318,7 @@ def generate_index(directory, all_filetypes, base_dir):
 <html>
 <head>
     <title>FKZ File Index - {MIRROR_TAG} - /{os.path.basename(os.path.abspath(directory))}/</title>
-    <style>
-        body {{
-            background-color: rgb(105, 64, 83);
-            font-family: monospace, sans-serif;
-            color: rgb(255, 80, 164);
-        }}
-        a {{
-            color: rgb(255, 80, 164);
-            text-decoration: none;
-        }}
-        a:hover {{
-            color: rgb(135, 1, 66);
-            text-decoration: underline;
-            background-color: rgb(255, 80, 164);
-        }}
-        ul {{
-            list-style-type: none;
-            padding-left: 20px;
-        }}
-        li {{
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }}
-        .file-size {{
-            display: inline-block;
-            width: 100px;
-            text-align: right;
-            margin-right: 10px;
-            color: fuchsia;
-            white-space: pre;
-        }}
-        .file-date {{
-            display: inline-block;
-            width: 140px;
-            text-align: right;
-            margin-right: 10px;
-            color: rgb(255, 150, 200);
-            white-space: pre;
-        }}
-    </style>
+    <link rel="stylesheet" href="{assets_prefix}/style.css">
     <link rel="shortcut icon" href="https://files.femboy.kz/web/images/fucker.ico">
 </head>
 <body>
@@ -422,28 +406,8 @@ def generate_index(directory, all_filetypes, base_dir):
                     """
             html += "</ul>\n"
 
-        html += """
-    <script>
-        function performSearch() {
-            const query = document.getElementById("search").value.toLowerCase();
-            const items = document.querySelectorAll("li");
-            items.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                item.style.display = text.includes(query) ? "block" : "none";
-            });
-        }
-
-        document.getElementById("search").addEventListener("input", performSearch);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const searchTerm = urlParams.get('search');
-  
-        if (searchTerm) {
-            const search = document.getElementById("search");
-            search.value = searchTerm;
-            performSearch();
-        }
-    </script>
+        html += f"""
+    <script src="{assets_prefix}/search.js"></script>
 </body>
 </html>
             """
@@ -515,6 +479,7 @@ def process_directory(directory, base_dir):
 def main(directory="."):
     base_dir = os.path.abspath(directory)
     try:
+        generate_assets(base_dir)
         process_directory(directory, base_dir)
     except Exception as e:
         print(f"Fatal error: {e}\n{traceback.format_exc()}", file=sys.stderr)
