@@ -341,7 +341,9 @@ def generate_page(directory, base_dir, all_filetypes, filetype=None):
 
         # Files section
         if files:
-            page += f"    <h2>Files - {len(files)}</h2>\n"
+            total_size = sum(os.path.getsize(os.path.join(directory, f)) for f in files)
+            formatted_total = format_file_size(total_size).strip()
+            page += f"    <h2>Files - {len(files)} [{formatted_total}]</h2>\n"
             page += '    <nav class="sort-controls">Sort: <a href="#" data-sortkey="size">[Size]</a> <a href="#" data-sortkey="date">[Date]</a> <a href="#" data-sortkey="name" class="sort-active">[Name \u25B2]</a></nav>\n'
             page += '    <ul id="file-list">\n'
             for fname in files:
