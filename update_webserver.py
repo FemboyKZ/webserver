@@ -1,6 +1,7 @@
 import os
 import sys
 import traceback
+from datetime import datetime, timezone
 
 # CFG
 EXCLUDE_MARKER = "EXCLUDE_FOLDER"
@@ -50,6 +51,15 @@ def format_file_size(bytes_size):
             return f"{bytes_size:6d}  B"
     except TypeError:
         return "N/A  B"
+
+
+def format_file_date(file_path):
+    try:
+        mtime = os.path.getmtime(file_path)
+        dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
+        return dt.strftime("%Y-%m-%d %H:%M")
+    except OSError:
+        return "N/A"
 
 
 def generate_html(directory, filetype, all_filetypes, base_dir):
@@ -118,6 +128,14 @@ def generate_html(directory, filetype, all_filetypes, base_dir):
             color: fuchsia;
             white-space: pre;
         }}
+        .file-date {{
+            display: inline-block;
+            width: 140px;
+            text-align: right;
+            margin-right: 10px;
+            color: rgb(255, 150, 200);
+            white-space: pre;
+        }}
     </style>
     <link rel="shortcut icon" href="https://files.femboy.kz/web/images/fucker.ico">
 </head>
@@ -173,7 +191,8 @@ def generate_html(directory, filetype, all_filetypes, base_dir):
             if os.path.isfile(item_path) and item.lower().endswith(f".{filetype}"):
                 file_size = os.path.getsize(item_path)
                 formatted_size = format_file_size(file_size)
-                files_html += f'<li><span class="file-size">[{formatted_size}]</span> <a href="{item}">{item}</a></li>\n'
+                formatted_date = format_file_date(item_path)
+                files_html += f'<li><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{item}">{item}</a></li>\n'
 
         if files_html:
             html += (
@@ -307,6 +326,14 @@ def generate_index(directory, all_filetypes, base_dir):
             color: fuchsia;
             white-space: pre;
         }}
+        .file-date {{
+            display: inline-block;
+            width: 140px;
+            text-align: right;
+            margin-right: 10px;
+            color: rgb(255, 150, 200);
+            white-space: pre;
+        }}
     </style>
     <link rel="shortcut icon" href="https://files.femboy.kz/web/images/fucker.ico">
 </head>
@@ -373,7 +400,8 @@ def generate_index(directory, all_filetypes, base_dir):
                     continue
                 file_size = os.path.getsize(item_path)
                 formatted_size = format_file_size(file_size)
-                files_html += f'<li><span class="file-size">[{formatted_size}]</span> <a href="{item}">{item}</a></li>\n'
+                formatted_date = format_file_date(item_path)
+                files_html += f'<li><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{item}">{item}</a></li>\n'
 
         if files_html:
             html += (
