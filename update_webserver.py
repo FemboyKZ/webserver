@@ -120,10 +120,9 @@ function sortFiles(key) {
         let cmp = va < vb ? -1 : va > vb ? 1 : 0;
         return sortAsc ? cmp : -cmp;
     });
-    const firstNonFile = list.querySelector("li:not([data-name]), nav, br");
     const frag = document.createDocumentFragment();
     items.forEach(item => frag.appendChild(item));
-    list.insertBefore(frag, firstNonFile);
+    list.appendChild(frag);
     document.querySelectorAll(".sort-controls a").forEach(a => {
         a.classList.toggle("sort-active", a.dataset.sortkey === key);
         if (a.dataset.sortkey === key) {
@@ -355,11 +354,11 @@ def generate_page(directory, base_dir, all_filetypes, filetype=None):
                 encoded = urllib.parse.quote(fname)
                 sort_name = html.escape(fname.lower())
                 page += f'        <li data-name="{sort_name}" data-size="{file_size}" data-date="{formatted_date}"><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{encoded}">{escaped}</a></li>\n'
+            page += "    </ul>\n"
             if len(files) >= MIN_FILES_FOR_NAV:
                 if up_link:
-                    page += f"        <br>\n        {up_link}"
-                page += '        <nav>\n            <a href="#" onclick="window.scrollTo({top: 0, behavior: \'smooth\'}); return false;">[Back to Top]</a>\n        </nav>\n'
-            page += "    </ul>\n"
+                    page += f"    <br>\n    {up_link}"
+                page += '    <nav>\n        <a href="#" onclick="window.scrollTo({top: 0, behavior: \'smooth\'}); return false;">[Back to Top]</a>\n    </nav>\n'
 
         page += f"""    <script src="{assets_prefix}/search.js"></script>
     <script src="{assets_prefix}/sort.js"></script>
