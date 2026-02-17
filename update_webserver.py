@@ -56,6 +56,17 @@ li {
     color: rgb(255, 150, 200);
     white-space: pre;
 }
+.sort-controls {
+    margin-bottom: 10px;
+}
+.sort-controls a {
+    margin-right: 8px;
+    cursor: pointer;
+}
+.sort-controls a.sort-active {
+    color: fuchsia;
+    text-decoration: underline;
+}
 """.strip()
 
 SEARCH_JS = """
@@ -80,21 +91,84 @@ if (searchTerm) {
 }
 """.strip()
 
+SORT_JS = """
+let currentSort = "name";
+let sortAsc = true;
+
+function sortFiles(key) {
+    const list = document.getElementById("file-list");
+    if (!list) return;
+    if (currentSort === key) {
+        sortAsc = !sortAsc;
+    } else {
+        currentSort = key;
+        sortAsc = true;
+    }
+    const items = Array.from(list.querySelectorAll("li[data-name]"));
+    items.sort((a, b) => {
+        let va, vb;
+        if (key === "size") {
+            va = parseInt(a.dataset.size, 10) || 0;
+            vb = parseInt(b.dataset.size, 10) || 0;
+        } else if (key === "date") {
+            va = a.dataset.date || "";
+            vb = b.dataset.date || "";
+        } else {
+            va = a.dataset.name || "";
+            vb = b.dataset.name || "";
+        }
+        let cmp = va < vb ? -1 : va > vb ? 1 : 0;
+        return sortAsc ? cmp : -cmp;
+    });
+    const firstNonFile = list.querySelector("li:not([data-name]), nav, br");
+    const frag = document.createDocumentFragment();
+    items.forEach(item => frag.appendChild(item));
+    list.insertBefore(frag, firstNonFile);
+    document.querySelectorAll(".sort-controls a").forEach(a => {
+        a.classList.toggle("sort-active", a.dataset.sortkey === key);
+        if (a.dataset.sortkey === key) {
+            a.textContent = "[" + key.charAt(0).toUpperCase() + key.slice(1) + (sortAsc ? " \u25B2" : " \u25BC") + "]";
+        } else {
+            a.textContent = "[" + a.dataset.sortkey.charAt(0).toUpperCase() + a.dataset.sortkey.slice(1) + "]";
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const ctrl = document.querySelector(".sort-controls");
+    if (ctrl) {
+        const nameBtn = ctrl.querySelector('a[data-sortkey="name"]');
+        if (nameBtn) nameBtn.classList.add("sort-active");
+        ctrl.querySelectorAll("a[data-sortkey]").forEach(a => {
+            a.addEventListener("click", function(e) {
+                e.preventDefault();
+                sortFiles(this.dataset.sortkey);
+            });
+        });
+    }
+});
+""".strip()
 
 def generate_assets(base_dir):
-    """Write style.css and search.js to the base directory."""
+    """Write style.css, search.js, and sort.js to the base directory."""
     css_path = os.path.join(base_dir, "style.css")
-    js_path = os.path.join(base_dir, "search.js")
+    search_path = os.path.join(base_dir, "search.js")
+    sort_path = os.path.join(base_dir, "sort.js")
     try:
         with open(css_path, "w") as f:
             f.write(STYLE_CSS)
     except OSError as e:
         print(f"Error writing CSS file '{css_path}': {e}", file=sys.stderr)
     try:
-        with open(js_path, "w") as f:
+        with open(search_path, "w") as f:
             f.write(SEARCH_JS)
     except OSError as e:
-        print(f"Error writing JS file '{js_path}': {e}", file=sys.stderr)
+        print(f"Error writing JS file '{search_path}': {e}", file=sys.stderr)
+    try:
+        with open(sort_path, "w") as f:
+            f.write(SORT_JS)
+    except OSError as e:
+        print(f"Error writing JS file '{sort_path}': {e}", file=sys.stderr)
 
 
 def get_file_ext(filename):
@@ -267,7 +341,9 @@ def generate_page(directory, base_dir, all_filetypes, filetype=None):
 
         # Files section
         if files:
-            page += f"    <h2>Files - {len(files)}</h2>\n    <ul>\n"
+            page += f"    <h2>Files - {len(files)}</h2>\n"
+            page += '    <nav class="sort-controls">Sort: <a href="#" data-sortkey="size">[Size]</a> <a href="#" data-sortkey="date">[Date]</a> <a href="#" data-sortkey="name" class="sort-active">[Name \u25B2]</a></nav>\n'
+            page += '    <ul id="file-list">\n'
             for fname in files:
                 item_path = os.path.join(directory, fname)
                 file_size = os.path.getsize(item_path)
@@ -275,7 +351,8 @@ def generate_page(directory, base_dir, all_filetypes, filetype=None):
                 formatted_date = format_file_date(item_path)
                 escaped = html.escape(fname)
                 encoded = urllib.parse.quote(fname)
-                page += f'        <li><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{encoded}">{escaped}</a></li>\n'
+                sort_name = html.escape(fname.lower())
+                page += f'        <li data-name="{sort_name}" data-size="{file_size}" data-date="{formatted_date}"><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{encoded}">{escaped}</a></li>\n'
             if len(files) >= MIN_FILES_FOR_NAV:
                 if up_link:
                     page += f"        <br>\n        {up_link}"
@@ -283,6 +360,7 @@ def generate_page(directory, base_dir, all_filetypes, filetype=None):
             page += "    </ul>\n"
 
         page += f"""    <script src="{assets_prefix}/search.js"></script>
+    <script src="{assets_prefix}/sort.js"></script>
 </body>
 </html>
 """
