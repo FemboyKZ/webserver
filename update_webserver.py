@@ -1,13 +1,20 @@
+import html
 import os
 import sys
 import traceback
+import urllib.parse
 from datetime import datetime, timezone
 
 # CFG
 EXCLUDE_MARKER = "EXCLUDE_FOLDER"
-IGNORED_FILETYPES = ["html", "php", "py", "sh", "js", "css", "htaccess", "tmp", "stignore"]
+IGNORED_FILETYPES = {"html", "php", "py", "sh", "js", "css", "htaccess", "tmp", "stignore"}
 MIN_FILES_FOR_NAV = 20
 MIN_FOLDERS_FOR_NAV = 30
+
+# Mirror config (set by CLI args)
+MIRROR_NAME = ""
+MIRROR_TAG = ""
+MIRROR_URL = ""
 
 STYLE_CSS = """
 body {
@@ -57,7 +64,7 @@ function performSearch() {
     const items = document.querySelectorAll("li");
     items.forEach(item => {
         const text = item.textContent.toLowerCase();
-        item.style.display = text.includes(query) ? "block" : "none";
+        item.style.display = text.includes(query) ? "flex" : "none";
     });
 }
 
@@ -90,7 +97,16 @@ def generate_assets(base_dir):
         print(f"Error writing JS file '{js_path}': {e}", file=sys.stderr)
 
 
+def get_file_ext(filename):
+    """Extract the lowercase file extension, handling dotfiles."""
+    _, ext = os.path.splitext(filename)
+    if ext == "" and filename.startswith("."):
+        return filename[1:].lower()
+    return ext.lstrip(".").lower()
+
+
 def get_filetypes(directory):
+    """Return sorted list of non-ignored file extensions found in directory."""
     filetypes = set()
     try:
         items = os.listdir(directory)
@@ -107,11 +123,7 @@ def get_filetypes(directory):
         item_path = os.path.join(directory, item)
         try:
             if os.path.isfile(item_path):
-                _, ext = os.path.splitext(item)
-                if ext == "" and item.startswith("."):
-                    ext = item[1:]
-                else:
-                    ext = ext.lstrip(".").lower()
+                ext = get_file_ext(item)
                 if ext and ext not in IGNORED_FILETYPES:
                     filetypes.add(ext)
         except OSError as e:
@@ -120,13 +132,14 @@ def get_filetypes(directory):
 
 
 def format_file_size(bytes_size):
+    """Format a file size in bytes to a human-readable string."""
     try:
-        if bytes_size >= 1024**3:
-            return f"{round(bytes_size / (1024 ** 3)):6.1f} GB"
-        elif bytes_size >= 1024**2:
-            return f"{round(bytes_size / (1024 ** 2)):6.1f} MB"
+        if bytes_size >= 1024 ** 3:
+            return f"{bytes_size / (1024 ** 3):6.1f} GB"
+        elif bytes_size >= 1024 ** 2:
+            return f"{bytes_size / (1024 ** 2):6.1f} MB"
         elif bytes_size >= 1024:
-            return f"{round(bytes_size / 1024):6.1f} KB"
+            return f"{bytes_size / 1024:6.1f} KB"
         else:
             return f"{bytes_size:6d}  B"
     except TypeError:
@@ -134,6 +147,7 @@ def format_file_size(bytes_size):
 
 
 def format_file_date(file_path):
+    """Return the last-modified date of a file as a formatted string."""
     try:
         mtime = os.path.getmtime(file_path)
         dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
@@ -142,8 +156,15 @@ def format_file_date(file_path):
         return "N/A"
 
 
-def generate_html(directory, filetype, all_filetypes, base_dir):
+def generate_page(directory, base_dir, all_filetypes, filetype=None):
+    """Generate an HTML page for a directory.
+
+    If filetype is None, generates an index page showing all non-ignored files.
+    Otherwise, generates a page filtered to the given file extension.
+    """
     try:
+        is_index = filetype is None
+
         up_link = ""
         if os.path.abspath(directory) != os.path.abspath(base_dir):
             up_link = '<li><a href="../">[Go Back]</a></li>\n'
@@ -156,301 +177,159 @@ def generate_html(directory, filetype, all_filetypes, base_dir):
         )
 
         assets_prefix = os.path.relpath(base_dir, directory).replace(os.path.sep, "/")
+        dir_name = html.escape(os.path.basename(os.path.abspath(directory)))
 
+        title = f"FKZ File Index - {html.escape(MIRROR_TAG)} - /{dir_name}/"
+        if not is_index:
+            title += f" - .{filetype.upper()}"
+
+        # Sort items once
         items = sorted(
             os.listdir(directory),
             key=lambda x: (not os.path.isdir(os.path.join(directory, x)), x.lower()),
         )
-        folders_count = 0
-        for item in items:
-            item_path = os.path.join(directory, item)
-            skip_subdir = os.path.exists(os.path.join(item_path, EXCLUDE_MARKER))
-            if not skip_subdir:
-                if os.path.isdir(item_path):
-                    folders_count += 1
-        files_count = 0
-        for item in items:
-            item_path = os.path.join(directory, item)
-            if os.path.isfile(item_path) and item.lower().endswith(f".{filetype}"):
-                files_count += 1
 
-        html = f"""<!DOCTYPE html>
+        # Collect folders (excluding marked ones)
+        folders = [
+            item for item in items
+            if os.path.isdir(os.path.join(directory, item))
+            and not os.path.exists(
+                os.path.join(os.path.join(directory, item), EXCLUDE_MARKER)
+            )
+        ]
+
+        # Collect files
+        files = []
+        for item in items:
+            item_path = os.path.join(directory, item)
+            if not os.path.isfile(item_path):
+                continue
+            if is_index:
+                ext = get_file_ext(item)
+                if ext in IGNORED_FILETYPES:
+                    continue
+            else:
+                if not item.lower().endswith(f".{filetype}"):
+                    continue
+            files.append(item)
+
+        # Build nav links
+        if is_index:
+            nav_parts = [
+                f'<a href="{ft}.html">[{ft.upper()}]</a>' for ft in all_filetypes
+            ]
+            nav_links = " | ".join(nav_parts)
+        else:
+            parts = ['<a href="./">[Home]</a>']
+            for ft in all_filetypes:
+                if ft != filetype:
+                    parts.append(f'<a href="{ft}.html">[{ft.upper()}]</a>')
+            nav_links = " | ".join(parts)
+
+        # Build page
+        page = f"""<!DOCTYPE html>
 <html>
 <head>
-    <title>FKZ File Index - {MIRROR_TAG} - /{os.path.basename(os.path.abspath(directory))}/ - .{filetype.upper()}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
     <link rel="stylesheet" href="{assets_prefix}/style.css">
     <link rel="shortcut icon" href="https://files.femboy.kz/web/images/fucker.ico">
 </head>
 <body>
-    <h1>FKZ File Index - {MIRROR_TAG} - /{os.path.basename(os.path.abspath(directory))}/ - .{filetype.upper()}</h1>
+    <h1>{title}</h1>
     <nav>
-        <a href="./">[Home]</a>"""
-
-        for ft in all_filetypes:
-            if ft != filetype:
-                html += f' | <a href="{ft}.html">[{ft.upper()}]</a>'
-
-        html += f"""
+        {nav_links}
     </nav>
     <br>
     <input type="text" id="search" placeholder="Search... :3" style="margin-bottom: 20px; padding: 5px;">
     <br>
     <nav>
-        <a href="{mirror_link}">[{MIRROR_NAME}]</a>
+        <a href="{html.escape(mirror_link)}">[{html.escape(MIRROR_NAME)}]</a>
     </nav>
     <br>
-    """
+"""
 
-        folders_html = ""
-        if up_link:
-            folders_html += up_link + "<br>\n"
+        # Folders section
+        if folders or up_link:
+            folders_header = f"Folders - {len(folders)}" if not is_index else "Folders"
+            page += f"    <h2>{folders_header}</h2>\n    <ul>\n"
+            if up_link:
+                page += f"        {up_link}        <br>\n"
+            for folder in folders:
+                escaped = html.escape(folder)
+                encoded = urllib.parse.quote(folder)
+                page += f'        <li><a href="{encoded}/">[{escaped}]</a></li>\n'
+            if is_index and len(folders) >= MIN_FOLDERS_FOR_NAV:
+                if up_link:
+                    page += f"        <br>\n        {up_link}"
+                page += '        <nav>\n            <a href="#" onclick="window.scrollTo({top: 0, behavior: \'smooth\'}); return false;">[Back to Top]</a>\n        </nav>\n'
+            page += "    </ul>\n"
 
-        items = sorted(
-            os.listdir(directory),
-            key=lambda x: (not os.path.isdir(os.path.join(directory, x)), x.lower()),
-        )
-        for item in items:
-            item_path = os.path.join(directory, item)
-            skip_subdir = os.path.exists(os.path.join(item_path, EXCLUDE_MARKER))
-            if not skip_subdir:
-                if os.path.isdir(item_path):
-                    folders_html += f'<li><a href="{item}/">[{item}]</a></li>\n'
-
-        if folders_html:
-            html += (
-                f"""
-    <h2>Folders - {folders_count}</h2>
-    <ul>
-            """
-                + folders_html
-                + """
-    </ul>"""
-            )
-
-        files_html = ""
-        for item in items:
-            item_path = os.path.join(directory, item)
-            if os.path.isfile(item_path) and item.lower().endswith(f".{filetype}"):
+        # Files section
+        if files:
+            files_header = f"Files - {len(files)}" if not is_index else "Files"
+            page += f"    <h2>{files_header}</h2>\n    <ul>\n"
+            for fname in files:
+                item_path = os.path.join(directory, fname)
                 file_size = os.path.getsize(item_path)
                 formatted_size = format_file_size(file_size)
                 formatted_date = format_file_date(item_path)
-                files_html += f'<li><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{item}">{item}</a></li>\n'
-
-        if files_html:
-            html += (
-                f"""
-    <h2>Files - {files_count}</h2>
-    <ul>
-                """
-                + files_html
-            )
-
-            if files_count >= MIN_FILES_FOR_NAV:
+                escaped = html.escape(fname)
+                encoded = urllib.parse.quote(fname)
+                page += f'        <li><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{encoded}">{escaped}</a></li>\n'
+            if len(files) >= MIN_FILES_FOR_NAV:
                 if up_link:
-                    html += "<br>\n" + up_link
-                html += """
-    <nav>
-        <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">[Back to Top]</a>
-    </nav>
-                    """
-            html += "</ul>\n"
+                    page += f"        <br>\n        {up_link}"
+                page += '        <nav>\n            <a href="#" onclick="window.scrollTo({top: 0, behavior: \'smooth\'}); return false;">[Back to Top]</a>\n        </nav>\n'
+            page += "    </ul>\n"
 
-        html += f"""
-    <script src="{assets_prefix}/search.js"></script>
+        page += f"""    <script src="{assets_prefix}/search.js"></script>
 </body>
 </html>
-        """
+"""
 
-        output_file = os.path.join(directory, f"{filetype}.html")
+        output_name = f"{filetype}.html" if not is_index else "index.html"
+        output_file = os.path.join(directory, output_name)
         try:
             with open(output_file, "w") as f:
-                f.write(html)
+                f.write(page)
         except OSError as e:
-            print(f"Error writing HTML file '{output_file}': {e}", file=sys.stderr)
+            print(f"Error writing file '{output_file}': {e}", file=sys.stderr)
     except Exception as e:
+        page_type = filetype or "index"
         print(
-            f"Error in generate_html for {directory}: {e}\n{traceback.format_exc()}",
-            file=sys.stderr,
-        )
-        raise
-
-
-def generate_index(directory, all_filetypes, base_dir):
-    try:
-        up_link = ""
-        if os.path.abspath(directory) != os.path.abspath(base_dir):
-            up_link = '<li><a href="../">[Go Back]</a></li>\n'
-
-        relative_path = os.path.relpath(directory, base_dir).replace(os.path.sep, "/")
-        mirror_link = (
-            f"{MIRROR_URL}/{relative_path}/"
-            if relative_path != "."
-            else MIRROR_URL + "/"
-        )
-
-        assets_prefix = os.path.relpath(base_dir, directory).replace(os.path.sep, "/")
-
-        items = sorted(
-            os.listdir(directory),
-            key=lambda x: (not os.path.isdir(os.path.join(directory, x)), x.lower()),
-        )
-        folders_count = 0
-        for item in items:
-            item_path = os.path.join(directory, item)
-            skip_subdir = os.path.exists(os.path.join(item_path, EXCLUDE_MARKER))
-            if not skip_subdir:
-                if os.path.isdir(item_path):
-                    folders_count += 1
-        files_count = 0
-        for item in items:
-            item_path = os.path.join(directory, item)
-            if os.path.isfile(item_path):
-                _, ext = os.path.splitext(item)
-                if ext == "" and item.startswith("."):
-                    ext = item[1:]
-                else:
-                    ext = ext.lstrip(".").lower()
-                if ext in IGNORED_FILETYPES:
-                    continue
-                files_count += 1
-
-        html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>FKZ File Index - {MIRROR_TAG} - /{os.path.basename(os.path.abspath(directory))}/</title>
-    <link rel="stylesheet" href="{assets_prefix}/style.css">
-    <link rel="shortcut icon" href="https://files.femboy.kz/web/images/fucker.ico">
-</head>
-<body>
-    <h1>FKZ File Index - {MIRROR_TAG} - /{os.path.basename(os.path.abspath(directory))}/</h1>
-    <nav>
-    """
-        for ft in all_filetypes:
-            html += f' | <a href="{ft}.html">[{ft.upper()}]</a>'
-        html += f"""
-    </nav>
-    <br>
-    <input type="text" id="search" placeholder="Search... :3" style="margin-bottom: 20px; padding: 5px;">
-    <br>
-    <nav>
-        <a href="{mirror_link}">[{MIRROR_NAME}]</a>
-    </nav>
-    <br>"""
-
-        folders_html = ""
-        if up_link:
-            folders_html += up_link + "<br>\n"
-
-        items = sorted(
-            os.listdir(directory),
-            key=lambda x: (not os.path.isdir(os.path.join(directory, x)), x.lower()),
-        )
-        for item in items:
-            item_path = os.path.join(directory, item)
-            skip_subdir = os.path.exists(os.path.join(item_path, EXCLUDE_MARKER))
-            if not skip_subdir:
-                if os.path.isdir(item_path):
-                    folders_html += f'<li><a href="{item}/">[{item}]</a></li>\n'
-
-        if folders_html:
-            html += (
-                """
-    <h2>Folders</h2>
-    <ul>
-                """
-                + folders_html
-            )
-            if folders_count >= MIN_FOLDERS_FOR_NAV:
-                if up_link:
-                    html += "<br>\n" + up_link
-                html += """
-    <nav>
-        <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">[Back to Top]</a>
-    </nav>
-                    """
-            html += """
-    </ul>"""
-
-        files_html = ""
-        for item in items:
-            item_path = os.path.join(directory, item)
-            if os.path.isfile(item_path):
-                _, ext = os.path.splitext(item)
-                if ext == "" and item.startswith("."):
-                    ext = item[1:]
-                else:
-                    ext = ext.lstrip(".").lower()
-                if ext in IGNORED_FILETYPES:
-                    continue
-                file_size = os.path.getsize(item_path)
-                formatted_size = format_file_size(file_size)
-                formatted_date = format_file_date(item_path)
-                files_html += f'<li><span class="file-size">[{formatted_size}]</span> <span class="file-date">{formatted_date}</span> <a href="{item}">{item}</a></li>\n'
-
-        if files_html:
-            html += (
-                """
-    <h2>Files</h2>
-    <ul>
-                """
-                + files_html
-            )
-
-            if files_count >= MIN_FILES_FOR_NAV:
-                if up_link:
-                    html += "<br>\n" + up_link
-                html += """
-    <nav>
-        <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">[Back to Top]</a>
-    </nav>
-                    """
-            html += "</ul>\n"
-
-        html += f"""
-    <script src="{assets_prefix}/search.js"></script>
-</body>
-</html>
-            """
-
-        output_file = os.path.join(directory, "index.html")
-        try:
-            with open(output_file, "w") as f:
-                f.write(html)
-        except OSError as e:
-            print(f"Error writing index file '{output_file}': {e}", file=sys.stderr)
-    except Exception as e:
-        print(
-            f"Error in generate_index for {directory}: {e}\n{traceback.format_exc()}",
+            f"Error generating {page_type} page for {directory}: {e}\n{traceback.format_exc()}",
             file=sys.stderr,
         )
         raise
 
 
 def process_directory(directory, base_dir):
+    """Recursively generate HTML pages for a directory tree."""
     try:
-        skip_html = os.path.exists(os.path.join(directory, EXCLUDE_MARKER))
-        if not skip_html:
-            all_filetypes = get_filetypes(directory)
+        if os.path.exists(os.path.join(directory, EXCLUDE_MARKER)):
+            print(f"Skipping excluded directory: {directory}")
+            return
 
-            if all_filetypes:
-                for filetype in all_filetypes:
-                    try:
-                        generate_html(directory, filetype, all_filetypes, base_dir)
-                    except Exception as e:
-                        print(
-                            f"Skipping HTML generation for {filetype} in {directory} due to error",
-                            file=sys.stderr,
-                        )
+        all_filetypes = get_filetypes(directory)
 
+        for filetype in all_filetypes:
             try:
-                generate_index(directory, all_filetypes, base_dir)
+                generate_page(directory, base_dir, all_filetypes, filetype=filetype)
             except Exception as e:
                 print(
-                    f"Skipping index generation for {directory} due to error",
+                    f"Skipping page generation for {filetype} in {directory} due to error",
                     file=sys.stderr,
                 )
-        else:
-            print(f"Skipping HTML generation for {directory} due to exclusion marker.")
+
+        try:
+            generate_page(directory, base_dir, all_filetypes)
+        except Exception as e:
+            print(
+                f"Skipping index generation for {directory} due to error",
+                file=sys.stderr,
+            )
 
         try:
             items = os.listdir(directory)
@@ -477,6 +356,7 @@ def process_directory(directory, base_dir):
 
 
 def main(directory="."):
+    """Entry point: generate assets and process all directories."""
     base_dir = os.path.abspath(directory)
     try:
         generate_assets(base_dir)
