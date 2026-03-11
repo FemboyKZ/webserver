@@ -75,6 +75,9 @@ const AUDIO_EXTENSIONS = new Map([
 
 const app = express();
 
+// Trust reverse proxy (Apache) for correct protocol/host in redirects
+app.set("trust proxy", 1);
+
 // Nunjucks setup
 const env = nunjucks.configure(path.join(__dirname, "..", "views"), {
   autoescape: true,
