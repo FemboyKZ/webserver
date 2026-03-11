@@ -201,7 +201,7 @@ function initPlayer(mediaEl) {
   }
 
   mediaEl.addEventListener("ended", () => {
-    playBtn.textContent = "\u25B6";
+    setIcon(playBtn, "play");
   });
 
   // Fullscreen auto-hide controls

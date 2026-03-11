@@ -205,9 +205,8 @@ function buildArchiveTree(entries) {
   );
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-  const totalCompressed = files.reduce((sum, f) => sum + (f.compressedSize || 0), 0);
 
-  return { dirs, files, totalSize, totalCompressed };
+  return { dirs, files, totalSize };
 }
 
 async function extractFileFromArchive(archivePath, entryPath) {
@@ -261,11 +260,11 @@ async function extractFileFromArchive(archivePath, entryPath) {
 }
 
 export {
-  getFileExt,
   formatFileSize,
   formatFileDate,
   readDirectory,
   getArchiveType,
+  sanitizeEntryName,
   listArchiveContents,
   buildArchiveTree,
   extractFileFromArchive,

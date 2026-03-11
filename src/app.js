@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import config from "./config.js";
-import { readDirectory, formatFileSize, formatFileDate, getArchiveType, listArchiveContents, buildArchiveTree, extractFileFromArchive } from "./utils.js";
+import { readDirectory, formatFileSize, formatFileDate, getArchiveType, sanitizeEntryName, listArchiveContents, buildArchiveTree, extractFileFromArchive } from "./utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -65,19 +65,20 @@ app.get("/{*splat}", async (req, res) => {
       const stat = fs.statSync(realPath);
       if (stat.isFile()) {
         // Raw download via ?raw=1 or non-browser clients (wget, curl, etc.)
+        // Skip when ?file= is present (archive entry requests handled below)
         const acceptsHtml = req.accepts("html");
-        if (req.query.raw === "1" || !acceptsHtml) {
+        if ((req.query.raw === "1" || !acceptsHtml) && !req.query.file) {
           return res.sendFile(realPath);
         }
 
         const ext = path.extname(realPath).replace(/^\./, "").toLowerCase();
         const baseName = path.basename(realPath);
         const nameNoExt = baseName.replace(/\.[^.]+$/, "").toLowerCase();
+        const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
 
         if (TEXT_EXTENSIONS.has(ext) || TEXT_EXTENSIONS.has(nameNoExt)) {
           const raw = fs.readFileSync(realPath);
           const content = raw.toString("utf-8");
-          const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
 
           // Detect line ending type
           const hasCRLF = content.includes("\r\n");
@@ -109,7 +110,6 @@ app.get("/{*splat}", async (req, res) => {
           });
         }
 
-        const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
         const mediaCtx = {
           title: `FKZ File Index - ${config.mirrorTag} - ${baseName}`,
           fileName: baseName,
@@ -146,7 +146,7 @@ app.get("/{*splat}", async (req, res) => {
           if (fileParam) {
             try {
               const data = await extractFileFromArchive(realPath, fileParam);
-              const entryName = fileParam.replace(/\\/g, "/").replace(/^\/+/, "").split("/").filter(p => p !== ".." && p !== ".").join("/");
+              const entryName = sanitizeEntryName(fileParam);
               const entryExt = path.extname(entryName).replace(/^\./, "").toLowerCase();
               const entryBase = path.basename(entryName);
 
