@@ -20,23 +20,31 @@ const env = nunjucks.configure(path.join(__dirname, "..", "views"), {
 app.use("/static", express.static(path.join(__dirname, "..", "public")));
 
 // Main browse route — handles all paths
-app.get("/*", async (req, res) => {
+app.get("/{*splat}", async (req, res) => {
   try {
     // Decode and normalize the requested path
     const reqPath = decodeURIComponent(req.path);
     const dirPath = path.join(config.filesRoot, reqPath);
     const resolved = path.resolve(dirPath);
 
-    // Path traversal protection
+    // Path traversal protection (pre-symlink check)
     if (!resolved.startsWith(config.filesRoot)) {
       return res.status(403).send("Forbidden");
     }
 
+    // Resolve symlinks and check the real path exists
+    let realPath;
+    try {
+      realPath = fs.realpathSync(resolved);
+    } catch {
+      return res.status(404).send("Not found");
+    }
+
     // Check if path is a file — serve it directly
     try {
-      const stat = fs.statSync(resolved);
+      const stat = fs.statSync(realPath);
       if (stat.isFile()) {
-        return res.sendFile(resolved);
+        return res.sendFile(realPath);
       }
     } catch {
       return res.status(404).send("Not found");
@@ -48,11 +56,11 @@ app.get("/*", async (req, res) => {
     }
 
     // Check for exclude marker
-    if (fs.existsSync(path.join(resolved, config.excludeMarker))) {
+    if (fs.existsSync(path.join(realPath, config.excludeMarker))) {
       return res.status(403).send("Forbidden");
     }
 
-    const { folders, files, filetypes } = await readDirectory(resolved);
+    const { folders, files, filetypes } = await readDirectory(realPath);
 
     // Filetype filter via query param
     const filetype = req.query.type?.toLowerCase() || null;
@@ -62,7 +70,7 @@ app.get("/*", async (req, res) => {
 
     const totalSize = displayFiles.reduce((sum, f) => sum + f.size, 0);
 
-    // Relative path for display
+    // Relative path for display (use logical path, not symlink target)
     const relativePath = path
       .relative(config.filesRoot, resolved)
       .replace(/\\/g, "/");
