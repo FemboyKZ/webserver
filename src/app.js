@@ -73,6 +73,8 @@ const AUDIO_EXTENSIONS = new Map([
   ["opus", "opus"],
 ]);
 
+const BOT_UA = /bot|crawl|spider|preview|embed|slack|discord|telegram|whatsapp|facebook|twitter|og-image/i;
+
 const app = express();
 
 // Trust reverse proxy (Apache) for correct protocol/host in redirects
@@ -137,8 +139,9 @@ app.get("/{*splat}", async (req, res) => {
         const nameNoExt = baseName.replace(/\.[^.]+$/, "").toLowerCase();
         const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
 
-        // Minimal embed page via ?embed=1 — for Discord / social media
-        if (req.query.embed === "1") {
+        // Minimal embed page via ?embed=1 or bot/crawler user agents
+        const ua = req.get("user-agent") || "";
+        if (req.query.embed === "1" || BOT_UA.test(ua)) {
           const embedCtx = {
             fileName: baseName,
             sizeFormatted: formatFileSize(stat.size),
