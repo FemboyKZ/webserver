@@ -4,6 +4,7 @@ import nunjucks from "nunjucks";
 import path from "path";
 import fs from "fs/promises";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 import config from "./config.js";
 import {
   readDirectory,
@@ -92,6 +93,27 @@ const env = nunjucks.configure(path.join(__dirname, "..", "views"), {
 env.addGlobal("discordInvite", config.discordInvite);
 env.addGlobal("repoUrl", config.repoUrl);
 env.addGlobal("siteUrl", config.siteUrl);
+
+// Build static asset version map for cache-busting
+const publicDir = path.join(__dirname, "..", "public");
+const assetVersions = new Map();
+
+async function buildAssetVersions(dir, prefix = "") {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      await buildAssetVersions(path.join(dir, entry.name), rel);
+    } else {
+      const content = await fs.readFile(path.join(dir, entry.name));
+      const hash = crypto.createHash("md5").update(content).digest("hex").slice(0, 8);
+      assetVersions.set(rel, hash);
+    }
+  }
+}
+
+await buildAssetVersions(publicDir);
+env.addGlobal("assetV", (file) => assetVersions.get(file) || "");
 
 // Security headers
 app.use((req, res, next) => {

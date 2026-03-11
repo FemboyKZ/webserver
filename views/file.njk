@@ -11,8 +11,8 @@
     <meta property="og:site_name" content="FKZ File Index">
     <meta name="twitter:card" content="summary">
     <meta name="theme-color" content="#7e5dcc">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+    <link rel="stylesheet" href="/static/style.css?v={{ assetV('style.css') }}">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico?v={{ assetV('assets/fucker.ico') }}">
 </head>
 <body>
     <h1>{{ fileName }}</h1>
@@ -55,6 +55,6 @@
     </nav>
     {% endif %}
 
-    <script src="/static/helpers.js"></script>
+    <script src="/static/helpers.js?v={{ assetV('helpers.js') }}"></script>
 </body>
 </html>

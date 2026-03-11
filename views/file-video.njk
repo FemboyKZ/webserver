@@ -13,8 +13,8 @@
     <meta property="og:video:type" content="video/{{ mimeSubtype }}">
     <meta name="twitter:card" content="player">
     <meta name="theme-color" content="#7e5dcc">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+    <link rel="stylesheet" href="/static/style.css?v={{ assetV('style.css') }}">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico?v={{ assetV('assets/fucker.ico') }}">
 </head>
 <body>
     <h1>{{ fileName }}</h1>
@@ -60,6 +60,6 @@
 
     <script src="https://unpkg.com/lucide@0.577.0/dist/umd/lucide.min.js"></script>
     <script>lucide.createIcons();</script>
-    <script src="/static/player.js"></script>
+    <script src="/static/player.js?v={{ assetV('player.js') }}"></script>
 </body>
 </html>

@@ -16,8 +16,8 @@
     <meta name="twitter:card" content="summary">
     {% endif %}
     <meta name="theme-color" content="#7e5dcc">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+    <link rel="stylesheet" href="/static/style.css?v={{ assetV('style.css') }}">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico?v={{ assetV('assets/fucker.ico') }}">
 </head>
 <body>
     <h1>{{ entryName }}</h1>
@@ -69,7 +69,7 @@
     <p>No preview available for this file type.</p>
     {% endif %}
 
-    <script src="/static/helpers.js"></script>
+    <script src="/static/helpers.js?v={{ assetV('helpers.js') }}"></script>
     {% if viewType == "image" %}
     <script>initImageResolution();</script>
     {% endif %}
