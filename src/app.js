@@ -1,5 +1,6 @@
 import express from "express";
 import compression from "compression";
+import rateLimit from "express-rate-limit";
 import nunjucks from "nunjucks";
 import path from "path";
 import fs from "fs/promises";
@@ -21,27 +22,40 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const TEXT_EXTENSIONS = new Set([
-  "txt",
-  "md",
-  "log",
+  "bat",
   "cfg",
+  "cmd",
   "conf",
-  "ini",
-  "yml",
-  "yaml",
-  "toml",
-  "json",
-  "xml",
+  "css",
   "csv",
-  "tsv",
+  "dockerfile",
   "env",
   "gitignore",
-  "dockerfile",
+  "html",
+  "ini",
+  "js",
+  "json",
+  "jsonc",
+  "jsx",
+  "log",
   "makefile",
+  "md",
+  "php",
+  "ps1",
+  "py",
   "rst",
+  "sh",
+  "shtml",
+  "sp",
   "tex",
-  "bat",
-  "cmd",
+  "toml",
+  "ts",
+  "tsv",
+  "tsx",
+  "txt",
+  "xml",
+  "yaml",
+  "yml",
 ]);
 
 const IMAGE_EXTENSIONS = new Set([
@@ -106,7 +120,11 @@ async function buildAssetVersions(dir, prefix = "") {
       await buildAssetVersions(path.join(dir, entry.name), rel);
     } else {
       const content = await fs.readFile(path.join(dir, entry.name));
-      const hash = crypto.createHash("md5").update(content).digest("hex").slice(0, 8);
+      const hash = crypto
+        .createHash("md5")
+        .update(content)
+        .digest("hex")
+        .slice(0, 8);
       assetVersions.set(rel, hash);
     }
   }
@@ -120,7 +138,20 @@ app.use((req, res, next) => {
   res.set("X-Content-Type-Options", "nosniff");
   res.set("X-Frame-Options", "SAMEORIGIN");
   res.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; frame-ancestors 'self'",
+  );
   next();
+});
+
+// Rate limiting
+const archiveLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: "Too many requests, please try again later.",
 });
 
 // Gzip/brotli compression
@@ -136,7 +167,15 @@ app.use(
 app.get("/{*splat}", async (req, res) => {
   try {
     // Decode and normalize the requested path
-    const reqPath = decodeURIComponent(req.path);
+    let reqPath;
+    try {
+      reqPath = decodeURIComponent(req.path);
+    } catch {
+      return res.status(400).render("error.njk", {
+        status: "400",
+        message: "Invalid URL encoding.",
+      });
+    }
     const dirPath = path.join(config.filesRoot, reqPath);
     const resolved = path.resolve(dirPath);
 
@@ -159,6 +198,15 @@ app.get("/{*splat}", async (req, res) => {
       });
     }
 
+    // Path traversal protection (post-symlink check)
+    const realFilesRoot = await fs.realpath(config.filesRoot);
+    if (!realPath.startsWith(realFilesRoot)) {
+      return res.status(403).render("error.njk", {
+        status: "403",
+        message: "You don't have permission to access this path.",
+      });
+    }
+
     // Check if path is a file — preview or serve
     try {
       const stat = await fs.stat(realPath);
@@ -178,10 +226,12 @@ app.get("/{*splat}", async (req, res) => {
         // Minimal embed page via ?embed=1 or bot/crawler user agents
         const ua = req.get("user-agent") || "";
         if (req.query.embed === "1" || BOT_UA.test(ua)) {
+          // Normalize path to prevent open redirect via // protocol-relative URLs
+          const safePath = "/" + req.path.replace(/^\/+/, "");
           const embedCtx = {
             fileName: baseName,
             sizeFormatted: formatFileSize(stat.size),
-            currentPath: req.path,
+            currentPath: safePath,
             ext: ext || "unknown",
           };
 
@@ -284,6 +334,12 @@ app.get("/{*splat}", async (req, res) => {
 
         const archiveType = getArchiveType(baseName);
         if (archiveType) {
+          // Apply rate limiting to archive operations
+          await new Promise((resolve, reject) => {
+            archiveLimiter(req, res, (err) => (err ? reject(err) : resolve()));
+          });
+          if (res.headersSent) return;
+
           // View a specific file inside the archive
           const fileParam = req.query.file;
           if (fileParam) {
@@ -371,10 +427,11 @@ app.get("/{*splat}", async (req, res) => {
                 ...viewCtx,
                 viewType: "unknown",
               });
-            } catch (err) {
+            } catch {
               return res.status(404).render("error.njk", {
                 status: "404",
-                message: `File not found in archive: ${err.message}`,
+                message:
+                  "The requested file could not be found in the archive.",
               });
             }
           }
@@ -396,7 +453,7 @@ app.get("/{*splat}", async (req, res) => {
               dirCount: dirs.length,
               totalSizeFormatted: formatFileSize(totalUncompressed),
             });
-          } catch (err) {
+          } catch {
             return res.render("file-archive.njk", {
               ...mediaCtx,
               archiveType,
@@ -405,7 +462,7 @@ app.get("/{*splat}", async (req, res) => {
               fileCount: 0,
               dirCount: 0,
               totalSizeFormatted: "0  B",
-              error: err.message,
+              error: "Could not read archive contents.",
             });
           }
         }

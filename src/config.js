@@ -37,18 +37,9 @@ export default {
   discordInvite: DISCORD_INVITE,
   repoUrl: REPO_URL,
   excludeMarker: "EXCLUDE_FOLDER",
-  ignoredFiletypes: new Set([
-    "html",
-    "php",
-    "py",
-    "sh",
-    "js",
-    "css",
-    "htaccess",
-    "tmp",
-    "stignore",
-  ]),
+  ignoredFiletypes: new Set(["htaccess", "tmp", "stignore"]),
   maxTextPreviewSize: 10 * 1024 * 1024, // 10 MB
+  maxArchiveExtractSize: 100 * 1024 * 1024, // 100 MB
   minFilesForNav: 20,
   minFoldersForNav: 30,
 };
