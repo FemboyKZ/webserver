@@ -1,5 +1,7 @@
 import fs from "fs/promises";
+import { createReadStream } from "fs";
 import path from "path";
+import crypto from "crypto";
 import AdmZip from "adm-zip";
 import sevenZip from "7zip-min";
 import * as tar from "tar";
@@ -267,6 +269,22 @@ async function extractFileFromArchive(archivePath, entryPath) {
   }
 }
 
+function computeFileHash(filePath) {
+  return new Promise((resolve, reject) => {
+    const sha256 = crypto.createHash("sha256");
+    const md5 = crypto.createHash("md5");
+    const stream = createReadStream(filePath);
+    stream.on("data", (chunk) => {
+      sha256.update(chunk);
+      md5.update(chunk);
+    });
+    stream.on("end", () =>
+      resolve({ sha256: sha256.digest("hex"), md5: md5.digest("hex") }),
+    );
+    stream.on("error", reject);
+  });
+}
+
 export {
   formatFileSize,
   formatFileDate,
@@ -276,4 +294,5 @@ export {
   listArchiveContents,
   buildArchiveTree,
   extractFileFromArchive,
+  computeFileHash,
 };

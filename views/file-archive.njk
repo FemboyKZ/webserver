@@ -26,6 +26,10 @@
     <span class="file-meta">[{{ sizeFormatted }}] {{ date }}</span>
     <br>
     <span class="file-meta">{{ archiveType | upper }} archive — {{ fileCount }} files, {{ dirCount }} directories [{{ totalSizeFormatted }} uncompressed]</span>
+    <br>
+    <span class="file-meta">SHA-256: {{ sha256 }}</span>
+    <br>
+    <span class="file-meta">MD5: {{ md5 }}</span>
     <br><br>
 
     <input type="text" id="search" placeholder="Search... :3" style="margin-bottom: 20px; padding: 5px;">

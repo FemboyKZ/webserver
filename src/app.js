@@ -14,6 +14,7 @@ import {
   listArchiveContents,
   buildArchiveTree,
   extractFileFromArchive,
+  computeFileHash,
 } from "./utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -175,6 +176,8 @@ app.get("/{*splat}", async (req, res) => {
           return res.render("embed.njk", embedCtx);
         }
 
+        const { sha256, md5 } = await computeFileHash(realPath);
+
         if (TEXT_EXTENSIONS.has(ext) || TEXT_EXTENSIONS.has(nameNoExt)) {
           // Skip text preview for files exceeding size limit
           if (stat.size > config.maxTextPreviewSize) {
@@ -186,6 +189,8 @@ app.get("/{*splat}", async (req, res) => {
               currentPath: req.path,
               parentPath,
               ext: ext || "unknown",
+              sha256,
+              md5,
             });
           }
 
@@ -219,6 +224,8 @@ app.get("/{*splat}", async (req, res) => {
             lineCount,
             charCount,
             minFilesForNav: config.minFilesForNav,
+            sha256,
+            md5,
           });
         }
 
@@ -228,6 +235,8 @@ app.get("/{*splat}", async (req, res) => {
           sizeFormatted: formatFileSize(stat.size),
           date: formatFileDate(stat.mtimeMs),
           currentPath: req.path,
+          sha256,
+          md5,
           parentPath,
         };
 
