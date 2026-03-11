@@ -47,7 +47,7 @@ li {
   min-width: 11ch;
   text-align: right;
   margin-right: 10px;
-  color: fuchsia;
+  color: rgb(255, 150, 200);
   white-space: pre;
 }
 .file-date {
