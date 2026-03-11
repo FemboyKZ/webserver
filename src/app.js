@@ -4,9 +4,15 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import config from "./config.js";
-import { readDirectory, formatFileSize } from "./utils.js";
+import { readDirectory, formatFileSize, formatFileDate } from "./utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const TEXT_EXTENSIONS = new Set([
+  "txt", "md", "log", "cfg", "conf", "ini", "yml", "yaml",
+  "toml", "json", "xml", "csv", "tsv", "env", "gitignore",
+  "dockerfile", "makefile", "rst", "tex", "bat", "cmd",
+]);
 
 const app = express();
 
@@ -40,11 +46,64 @@ app.get("/{*splat}", async (req, res) => {
       return res.status(404).send("Not found");
     }
 
-    // Check if path is a file — serve it directly
+    // Check if path is a file — preview or serve
     try {
       const stat = fs.statSync(realPath);
       if (stat.isFile()) {
-        return res.sendFile(realPath);
+        // Raw download via ?raw=1
+        if (req.query.raw === "1") {
+          return res.download(realPath);
+        }
+
+        const ext = path.extname(realPath).replace(/^\./, "").toLowerCase();
+        const baseName = path.basename(realPath);
+        const nameNoExt = baseName.replace(/\.[^.]+$/, "").toLowerCase();
+
+        if (TEXT_EXTENSIONS.has(ext) || TEXT_EXTENSIONS.has(nameNoExt)) {
+          const raw = fs.readFileSync(realPath);
+          const content = raw.toString("utf-8");
+          const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
+
+          // Detect line ending type
+          const hasCRLF = content.includes("\r\n");
+          const hasCR = !hasCRLF && content.includes("\r");
+          const lineEnding = hasCRLF ? "CRLF" : hasCR ? "CR" : "LF";
+
+          // Detect encoding (check for UTF-8 BOM or assume UTF-8)
+          const hasBOM = raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF;
+          const encoding = hasBOM ? "UTF-8 (BOM)" : "UTF-8";
+
+          const lines = content.split(/\r\n|\r|\n/);
+          const lineCount = lines.length;
+          const charCount = content.length;
+
+          return res.render("file.njk", {
+            title: `FKZ File Index - ${config.mirrorTag} - ${baseName}`,
+            fileName: baseName,
+            lines,
+            content,
+            sizeFormatted: formatFileSize(stat.size),
+            date: formatFileDate(stat.mtimeMs),
+            currentPath: req.path,
+            parentPath,
+            encoding,
+            lineEnding,
+            lineCount,
+            charCount,
+            minFilesForNav: config.minFilesForNav,
+          });
+        }
+
+        const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
+        return res.render("file-unknown.njk", {
+          title: `FKZ File Index - ${config.mirrorTag} - ${baseName}`,
+          fileName: baseName,
+          ext: ext || "unknown",
+          sizeFormatted: formatFileSize(stat.size),
+          date: formatFileDate(stat.mtimeMs),
+          currentPath: req.path,
+          parentPath,
+        });
       }
     } catch {
       return res.status(404).send("Not found");

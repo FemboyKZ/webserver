@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+</head>
+<body>
+    <h1>{{ fileName }}</h1>
+
+    <nav>
+        <a href="{{ parentPath }}">[Go Back]</a> |
+        <a href="{{ currentPath }}?raw=1">[Download]</a> |
+        <a href="#" id="copy-btn" onclick="copyFileContent(); return false;">[Copy Text]</a>
+    </nav>
+    <br>
+
+    <span class="file-meta">[{{ sizeFormatted }}] {{ date }}</span>
+    <br>
+    <span class="file-meta">{{ encoding }} | {{ lineEnding }} | {{ charCount }} chars | {{ lineCount }} lines</span>
+    <br><br>
+
+    {% if content %}
+    <div class="file-content">
+        <table class="line-table">
+{%- for line in lines %}
+            <tr><td class="line-number">{{ loop.index }}</td><td class="line-text">{{ line }}</td></tr>
+{%- endfor %}
+        </table>
+    </div>
+    {% else %}
+    <p>File is empty.</p>
+    {% endif %}
+
+    {% if lineCount >= minFilesForNav %}
+    <br>
+    <nav>
+        <a href="{{ parentPath }}">[Go Back]</a> |
+        <a href="{{ currentPath }}?raw=1">[Download]</a> |
+        <a href="#" onclick="copyFileContent(); return false;">[Copy Text]</a> |
+        <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">[Back to Top]</a>
+    </nav>
+    {% endif %}
+
+    <script src="/static/search.js"></script>
+    <script>
+    function copyFileContent() {
+        const cells = document.querySelectorAll(".line-text");
+        const text = Array.from(cells).map(c => c.textContent).join("\n");
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById("copy-btn");
+            const original = btn.textContent;
+            btn.textContent = "[Copied!]";
+            setTimeout(() => { btn.textContent = original; }, 1500);
+        });
+    }
+    </script>
+</body>
+</html>

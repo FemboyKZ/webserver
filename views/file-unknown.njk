@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+</head>
+<body>
+    <h1>{{ fileName }}</h1>
+
+    <nav>
+        <a href="{{ parentPath }}">[Go Back]</a> |
+        <a href="{{ currentPath }}?raw=1">[Download]</a>
+    </nav>
+    <br>
+
+    <span class="file-meta">[{{ sizeFormatted }}] {{ date }}</span>
+    <br>
+    <span class="file-meta">{{ ext | upper }} file</span>
+    <br><br>
+
+    <p>No preview available for this file type.</p>
+
+    <script src="/static/search.js"></script>
+</body>
+</html>
