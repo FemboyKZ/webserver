@@ -225,19 +225,34 @@ async function extractFileFromArchive(archivePath, entryPath) {
     const entry = zip.getEntry(sanitized) || zip.getEntry(sanitized + "/");
     if (!entry || entry.isDirectory)
       throw new Error("File not found in archive");
+    if (entry.header.size > config.maxArchiveExtractSize)
+      throw new Error("File too large to extract");
     return entry.getData();
   }
 
   if (TAR_TYPES.has(archiveType)) {
     const chunks = [];
     let found = false;
+    let totalSize = 0;
     await tar.t({
       file: archivePath,
       onReadEntry(entry) {
         const name = sanitizeEntryName(entry.path);
         if (name === sanitized && entry.type !== "Directory") {
+          if (entry.size > config.maxArchiveExtractSize) {
+            entry.destroy();
+            return;
+          }
           found = true;
-          entry.on("data", (chunk) => chunks.push(chunk));
+          entry.on("data", (chunk) => {
+            totalSize += chunk.length;
+            if (totalSize > config.maxArchiveExtractSize) {
+              entry.destroy();
+              found = false;
+              return;
+            }
+            chunks.push(chunk);
+          });
         }
       },
     });
@@ -263,6 +278,9 @@ async function extractFileFromArchive(archivePath, entryPath) {
     const filePath = path.join(tmpDir, ...sanitized.split("/"));
     const resolved = path.resolve(filePath);
     if (!resolved.startsWith(tmpDir)) throw new Error("Invalid entry path");
+    const stat = await fs.stat(resolved);
+    if (stat.size > config.maxArchiveExtractSize)
+      throw new Error("File too large to extract");
     return await fs.readFile(resolved);
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true });
