@@ -16,7 +16,7 @@
   background-color: rgb(255, 150, 200);
 }
 body {
-  background-color: rgb(55, 25, 38);
+  background-color: rgb(105, 64, 83);
   font-family: monospace, sans-serif;
   color: rgb(255, 80, 164);
 }
@@ -92,7 +92,7 @@ li {
 .line-number {
   text-align: right;
   padding: 2px 10px;
-  color: rgb(200, 100, 150);
+  color: rgb(180, 80, 130);
   background-color: rgba(0, 0, 0, 0.2);
   user-select: none;
   white-space: nowrap;
