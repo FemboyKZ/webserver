@@ -1,5 +1,7 @@
 function performSearch() {
-  const query = document.getElementById("search").value.toLowerCase();
+  const searchEl = document.getElementById("search");
+  if (!searchEl) return;
+  const query = searchEl.value.toLowerCase();
   const items = document.querySelectorAll("li");
   items.forEach((item) => {
     const text = item.textContent.toLowerCase();
@@ -7,13 +9,15 @@ function performSearch() {
   });
 }
 
-document.getElementById("search").addEventListener("input", performSearch);
+const searchInput = document.getElementById("search");
+if (searchInput) {
+  searchInput.addEventListener("input", performSearch);
 
-const urlParams = new URLSearchParams(window.location.search);
-const searchTerm = urlParams.get("search");
+  const urlParams = new URLSearchParams(window.location.search);
+  const searchTerm = urlParams.get("search");
 
-if (searchTerm) {
-  const search = document.getElementById("search");
-  search.value = searchTerm;
-  performSearch();
+  if (searchTerm) {
+    searchInput.value = searchTerm;
+    performSearch();
+  }
 }
