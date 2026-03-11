@@ -32,14 +32,27 @@ async function readDirectory(dirPath) {
   for (const entry of entries) {
     const fullPath = path.join(dirPath, entry.name);
 
-    if (entry.isDirectory()) {
+    // Resolve symlinks to determine actual type
+    let isDir = entry.isDirectory();
+    let isFile = entry.isFile();
+    if (entry.isSymbolicLink()) {
+      try {
+        const stat = await fs.stat(fullPath);
+        isDir = stat.isDirectory();
+        isFile = stat.isFile();
+      } catch {
+        continue; // broken symlink
+      }
+    }
+
+    if (isDir) {
       try {
         await fs.access(path.join(fullPath, config.excludeMarker));
         // Marker exists — skip this folder
       } catch {
         folders.push({ name: entry.name });
       }
-    } else if (entry.isFile()) {
+    } else if (isFile) {
       const ext = getFileExt(entry.name);
       if (config.ignoredFiletypes.has(ext)) continue;
 
