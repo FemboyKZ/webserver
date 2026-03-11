@@ -1,6 +1,6 @@
-const fs = require("fs/promises");
-const path = require("path");
-const config = require("./config");
+import fs from "fs/promises";
+import path from "path";
+import config from "./config.js";
 
 function getFileExt(filename) {
   const ext = path.extname(filename);
@@ -72,4 +72,4 @@ async function readDirectory(dirPath) {
   return { folders, files, filetypes };
 }
 
-module.exports = { getFileExt, formatFileSize, formatFileDate, readDirectory };
+export { getFileExt, formatFileSize, formatFileDate, readDirectory };

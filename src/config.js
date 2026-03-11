@@ -1,4 +1,4 @@
-const path = require("path");
+import path from "path";
 
 const MIRRORS = {
   na: {
@@ -25,7 +25,7 @@ if (!site || !MIRRORS[site]) {
 const FILES_ROOT = path.resolve(process.argv[3] || ".");
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 
-module.exports = {
+export default {
   ...MIRRORS[site],
   filesRoot: FILES_ROOT,
   port: PORT,

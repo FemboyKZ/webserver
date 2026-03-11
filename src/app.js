@@ -1,9 +1,12 @@
-const express = require("express");
-const nunjucks = require("nunjucks");
-const path = require("path");
-const fs = require("fs");
-const config = require("./config");
-const { readDirectory, formatFileSize } = require("./utils");
+import express from "express";
+import nunjucks from "nunjucks";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import config from "./config.js";
+import { readDirectory, formatFileSize } from "./utils.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
