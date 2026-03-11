@@ -1,7 +1,4 @@
 function populateMediaInfo(mediaEl) {
-  const container = mediaEl.closest(".player");
-  const infoContainer = container?.parentElement;
-
   // Duration
   const durationEl = document.getElementById("mediaDuration");
   if (durationEl && mediaEl.duration && isFinite(mediaEl.duration)) {
@@ -39,12 +36,6 @@ function populateMediaInfo(mediaEl) {
           if (elapsed > 0) {
             const fps = Math.round((frameCount - 1) / elapsed);
             fpsEl.textContent = "Framerate: " + fps + " fps";
-          }
-          // Pause and reset if we started playback just for detection
-          if (mediaEl._fpsDetectionAutoPlayed) {
-            mediaEl.pause();
-            mediaEl.currentTime = 0;
-            delete mediaEl._fpsDetectionAutoPlayed;
           }
         } else {
           mediaEl.requestVideoFrameCallback(onFrame);
@@ -118,13 +109,15 @@ function initPlayer(mediaEl) {
   }
 
   function setIcon(btn, name) {
-    btn.innerHTML = '<i data-lucide="' + name + '"></i>';
+    const icon = document.createElement("i");
+    icon.setAttribute("data-lucide", name);
+    btn.replaceChildren(icon);
     if (window.lucide) lucide.createIcons({ nodes: [btn] });
   }
 
   playBtn.addEventListener("click", () => {
     if (mediaEl.paused) {
-      mediaEl.play();
+      mediaEl.play().catch(() => {});
     } else {
       mediaEl.pause();
     }
@@ -194,7 +187,7 @@ function initPlayer(mediaEl) {
   if (mediaEl.tagName === "VIDEO") {
     mediaEl.addEventListener("click", () => {
       if (mediaEl.paused) {
-        mediaEl.play();
+        mediaEl.play().catch(() => {});
       } else {
         mediaEl.pause();
       }
