@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+</head>
+<body>
+    <h1>{{ fileName }}</h1>
+
+    <nav>
+        <a href="{{ parentPath }}">[Go Back]</a> |
+        <a href="{{ currentPath }}?raw=1">[Download]</a>
+    </nav>
+    <br>
+
+    <span class="file-meta">[{{ sizeFormatted }}] {{ date }}</span>
+    <br>
+    <span class="file-meta">{{ archiveType | upper }} archive — {{ fileCount }} files, {{ dirCount }} directories [{{ totalSizeFormatted }} uncompressed]</span>
+    <br><br>
+
+    <input type="text" id="search" placeholder="Search... :3" style="margin-bottom: 20px; padding: 5px;">
+    <br>
+
+    {% if dirs.length %}
+    <h2>Directories - {{ dirCount }}</h2>
+    <ul>
+        {% for dir in dirs %}
+            <li>{{ dir.path }}/</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if files.length %}
+    <h2>Files - {{ fileCount }} [{{ totalSizeFormatted }}]</h2>
+    <nav class="sort-controls">
+        Sort:
+        <a href="#" data-sortkey="size">[Size]</a>
+        <a href="#" data-sortkey="date">[Date]</a>
+        <a href="#" data-sortkey="name" class="sort-active">[Name &#9650;]</a>
+    </nav>
+    <ul id="file-list">
+{%- for file in files %}
+<li data-name="{{ file.name | lower }}" data-size="{{ file.size }}" data-date="{{ file.date }}"><span class="file-size">[{{ file.sizeFormatted }}]</span> <span class="file-date">{{ file.date }}</span> <a href="{{ currentPath }}?file={{ file.name | urlencode }}">{{ file.name }}</a></li>
+{%- endfor %}
+    </ul>
+    {% endif %}
+
+    {% if error %}
+    <p class="error-message">Could not read archive: {{ error }}</p>
+    {% endif %}
+
+    <script src="/static/search.js"></script>
+    <script src="/static/sort.js"></script>
+</body>
+</html>

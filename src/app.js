@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import config from "./config.js";
-import { readDirectory, formatFileSize, formatFileDate } from "./utils.js";
+import { readDirectory, formatFileSize, formatFileDate, getArchiveType, listArchiveContents, buildArchiveTree, extractFileFromArchive } from "./utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -137,6 +137,107 @@ app.get("/{*splat}", async (req, res) => {
             ext,
             mimeSubtype: AUDIO_EXTENSIONS.get(ext),
           });
+        }
+
+        const archiveType = getArchiveType(baseName);
+        if (archiveType) {
+          // View a specific file inside the archive
+          const fileParam = req.query.file;
+          if (fileParam) {
+            try {
+              const data = await extractFileFromArchive(realPath, fileParam);
+              const entryName = fileParam.replace(/\\/g, "/").replace(/^\/+/, "").split("/").filter(p => p !== ".." && p !== ".").join("/");
+              const entryExt = path.extname(entryName).replace(/^\./, "").toLowerCase();
+              const entryBase = path.basename(entryName);
+
+              // Raw download
+              if (req.query.raw === "1") {
+                const mime = {
+                  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+                  gif: "image/gif", bmp: "image/bmp", webp: "image/webp",
+                  svg: "image/svg+xml", ico: "image/x-icon", avif: "image/avif",
+                };
+                res.set("Content-Type", mime[entryExt] || "application/octet-stream");
+                res.set("Content-Disposition", `attachment; filename="${entryBase}"`);
+                return res.send(data);
+              }
+
+              // Find entry metadata
+              const entries = await listArchiveContents(realPath);
+              const entryMeta = entries.find(e => e.name === entryName) || {};
+
+              const viewCtx = {
+                title: `FKZ File Index - ${config.mirrorTag} - ${baseName} - ${entryBase}`,
+                entryName,
+                archiveName: baseName,
+                archivePath: req.path,
+                currentPath: req.path,
+                ext: entryExt || "unknown",
+                sizeFormatted: formatFileSize(entryMeta.size || data.length),
+                date: entryMeta.date || "",
+              };
+
+              // Text preview
+              if (TEXT_EXTENSIONS.has(entryExt) || TEXT_EXTENSIONS.has(entryBase.replace(/\.[^.]+$/, "").toLowerCase())) {
+                const content = data.toString("utf-8");
+                const hasCRLF = content.includes("\r\n");
+                const hasCR = !hasCRLF && content.includes("\r");
+                const lines = content.split(/\r\n|\r|\n/);
+                return res.render("file-archive-view.njk", {
+                  ...viewCtx,
+                  viewType: "text",
+                  content,
+                  lines,
+                  lineCount: lines.length,
+                  charCount: content.length,
+                  encoding: "UTF-8",
+                  lineEnding: hasCRLF ? "CRLF" : hasCR ? "CR" : "LF",
+                });
+              }
+
+              // Image preview
+              if (IMAGE_EXTENSIONS.has(entryExt)) {
+                return res.render("file-archive-view.njk", {
+                  ...viewCtx,
+                  viewType: "image",
+                });
+              }
+
+              // Unknown file type
+              return res.render("file-archive-view.njk", {
+                ...viewCtx,
+                viewType: "unknown",
+              });
+            } catch (err) {
+              return res.status(404).render("error.njk", { status: "404", message: `File not found in archive: ${err.message}` });
+            }
+          }
+
+          // List archive contents
+          try {
+            const entries = await listArchiveContents(realPath);
+            const { dirs, files: archiveFiles, totalSize: totalUncompressed } = buildArchiveTree(entries);
+            return res.render("file-archive.njk", {
+              ...mediaCtx,
+              archiveType,
+              dirs,
+              files: archiveFiles,
+              fileCount: archiveFiles.length,
+              dirCount: dirs.length,
+              totalSizeFormatted: formatFileSize(totalUncompressed),
+            });
+          } catch (err) {
+            return res.render("file-archive.njk", {
+              ...mediaCtx,
+              archiveType,
+              dirs: [],
+              files: [],
+              fileCount: 0,
+              dirCount: 0,
+              totalSizeFormatted: "0  B",
+              error: err.message,
+            });
+          }
         }
 
         return res.render("file-unknown.njk", {
