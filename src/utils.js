@@ -1,5 +1,4 @@
 import fs from "fs/promises";
-import fsSync from "fs";
 import path from "path";
 import AdmZip from "adm-zip";
 import sevenZip from "7zip-min";
