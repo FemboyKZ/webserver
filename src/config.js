@@ -25,10 +25,15 @@ if (!site || !MIRRORS[site]) {
 const FILES_ROOT = path.resolve(process.argv[3] || ".");
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 
+const DISCORD_INVITE = "https://discord.gg/fkz";
+const REPO_URL = "https://github.com/FemboyKZ/webserver";
+
 export default {
   ...MIRRORS[site],
   filesRoot: FILES_ROOT,
   port: PORT,
+  discordInvite: DISCORD_INVITE,
+  repoUrl: REPO_URL,
   excludeMarker: "EXCLUDE_FOLDER",
   ignoredFiletypes: new Set([
     "html",

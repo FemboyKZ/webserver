@@ -84,6 +84,8 @@ const env = nunjucks.configure(path.join(__dirname, "..", "views"), {
   express: app,
 });
 
+env.addGlobal("discordInvite", config.discordInvite);
+
 // Serve static assets (CSS/JS) from /static/
 app.use("/static", express.static(path.join(__dirname, "..", "public")));
 
