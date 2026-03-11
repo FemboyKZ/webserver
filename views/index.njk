@@ -69,13 +69,9 @@
         <a href="#" data-sortkey="name" class="sort-active">[Name &#9650;]</a>
     </nav>
     <ul id="file-list">
-        {% for file in files %}
-            <li data-name="{{ file.name | lower }}" data-size="{{ file.size }}" data-date="{{ file.date }}">
-                <span class="file-size">[{{ file.sizeFormatted }}]</span>
-                <span class="file-date">{{ file.date }}</span>
-                <a href="{{ currentPath }}{{ file.name | urlencode }}">{{ file.name }}</a>
-            </li>
-        {% endfor %}
+{%- for file in files %}
+<li data-name="{{ file.name | lower }}" data-size="{{ file.size }}" data-date="{{ file.date }}"><span class="file-size">[{{ file.sizeFormatted }}]</span> <span class="file-date">{{ file.date }}</span> <a href="{{ currentPath }}{{ file.name | urlencode }}">{{ file.name }}</a></li>
+{%- endfor %}
     </ul>
     {% if totalCount >= minFilesForNav %}
         {% if not isRoot %}
