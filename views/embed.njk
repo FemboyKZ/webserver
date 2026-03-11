@@ -34,6 +34,6 @@
 </head>
 <body>
     <p>Redirecting…</p>
-    <script>window.location.replace({{ currentPath | dump | safe }});</script>
+    <script>window.location.replace({{ currentPath | dump | replace("</", "<\\/") | safe }});</script>
 </body>
 </html>
