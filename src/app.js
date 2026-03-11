@@ -198,15 +198,6 @@ app.get("/{*splat}", async (req, res) => {
       });
     }
 
-    // Path traversal protection (post-symlink check)
-    const realFilesRoot = await fs.realpath(config.filesRoot);
-    if (!realPath.startsWith(realFilesRoot)) {
-      return res.status(403).render("error.njk", {
-        status: "403",
-        message: "You don't have permission to access this path.",
-      });
-    }
-
     // Check if path is a file — preview or serve
     try {
       const stat = await fs.stat(realPath);
