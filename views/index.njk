@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="shortcut icon" href="https://files.femboy.kz/web/images/fucker.ico">
+</head>
+<body>
+    <h1>{{ title }}</h1>
+
+    {# Filetype navigation #}
+    <nav>
+        {% if activeFiletype %}
+            <a href="{{ currentPath }}">[Home]</a>
+            {% for ft in filetypes %}
+                {% if ft != activeFiletype %}
+                    | <a href="{{ currentPath }}?type={{ ft }}">[{{ ft | upper }}]</a>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            {% for ft in filetypes %}
+                {% if not loop.first %} | {% endif %}
+                <a href="{{ currentPath }}?type={{ ft }}">[{{ ft | upper }}]</a>
+            {% endfor %}
+        {% endif %}
+    </nav>
+    <br>
+
+    <input type="text" id="search" placeholder="Search... :3" style="margin-bottom: 20px; padding: 5px;">
+    <br>
+
+    <nav>
+        <a href="{{ mirrorLink }}">[{{ mirrorName }}]</a>
+    </nav>
+    <br>
+
+    {# Folders #}
+    {% if folders.length or not isRoot %}
+    <h2>Folders - {{ folderCount }}</h2>
+    <ul>
+        {% if not isRoot %}
+            <li><a href="../">[Go Back]</a></li>
+            <br>
+        {% endif %}
+        {% for folder in folders %}
+            <li><a href="{{ currentPath }}{{ folder.name | urlencode }}/">[{{ folder.name }}]</a></li>
+        {% endfor %}
+        {% if folderCount >= minFoldersForNav %}
+            {% if not isRoot %}
+                <br>
+                <li><a href="../">[Go Back]</a></li>
+            {% endif %}
+            <nav>
+                <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">[Back to Top]</a>
+            </nav>
+        {% endif %}
+    </ul>
+    {% endif %}
+
+    {# Files #}
+    {% if files.length %}
+    <h2>Files - {{ totalCount }} [{{ totalSize }}]</h2>
+    <nav class="sort-controls">
+        Sort:
+        <a href="#" data-sortkey="size">[Size]</a>
+        <a href="#" data-sortkey="date">[Date]</a>
+        <a href="#" data-sortkey="name" class="sort-active">[Name &#9650;]</a>
+    </nav>
+    <ul id="file-list">
+        {% for file in files %}
+            <li data-name="{{ file.name | lower }}" data-size="{{ file.size }}" data-date="{{ file.date }}">
+                <span class="file-size">[{{ file.sizeFormatted }}]</span>
+                <span class="file-date">{{ file.date }}</span>
+                <a href="{{ currentPath }}{{ file.name | urlencode }}">{{ file.name }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+    {% if totalCount >= minFilesForNav %}
+        {% if not isRoot %}
+            <br>
+            <a href="../">[Go Back]</a>
+        {% endif %}
+        <nav>
+            <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">[Back to Top]</a>
+        </nav>
+    {% endif %}
+    {% endif %}
+
+    <script src="/static/search.js"></script>
+    <script src="/static/sort.js"></script>
+</body>
+</html>

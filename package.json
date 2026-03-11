@@ -1,0 +1,24 @@
+{
+  "name": "fkz-file-index",
+  "version": "1.0.0",
+  "author": "jvnipers",
+  "license": "AGPL-3.0-only",
+  "description": "FKZ dynamic file index server",
+  "type": "module",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "nunjucks": "^3.2.4"
+  },
+  "devDependencies": {
+    "eslint": "^10.0.3",
+    "prettier": "^3.8.1"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log*
+.git
+.gitignore
+eslint.config.js
+*.md
+*.py
+EXCLUDE_FOLDER
+LICENSE

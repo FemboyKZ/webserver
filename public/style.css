@@ -1,0 +1,50 @@
+body {
+  background-color: rgb(105, 64, 83);
+  font-family: monospace, sans-serif;
+  color: rgb(255, 80, 164);
+}
+a {
+  color: rgb(255, 80, 164);
+  text-decoration: none;
+}
+a:hover {
+  color: rgb(135, 1, 66);
+  text-decoration: underline;
+  background-color: rgb(255, 80, 164);
+}
+ul {
+  list-style-type: none;
+  padding-left: 20px;
+}
+li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.file-size {
+  display: inline-block;
+  width: 100px;
+  text-align: right;
+  margin-right: 10px;
+  color: fuchsia;
+  white-space: pre;
+}
+.file-date {
+  display: inline-block;
+  width: 140px;
+  text-align: right;
+  margin-right: 10px;
+  color: rgb(255, 150, 200);
+  white-space: pre;
+}
+.sort-controls {
+  margin-bottom: 10px;
+}
+.sort-controls a {
+  margin-right: 8px;
+  cursor: pointer;
+}
+.sort-controls a.sort-active {
+  color: fuchsia;
+  text-decoration: underline;
+}

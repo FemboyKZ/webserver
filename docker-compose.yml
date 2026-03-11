@@ -1,0 +1,13 @@
+services:
+  webserver:
+    build: .
+    ports:
+      - "4000:4000"
+    command: ["na", "/data"]
+    environment:
+      - PORT=4000
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    volumes:
+      - /path/to/files:/data
