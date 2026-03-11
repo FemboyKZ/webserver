@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - "4000:4000"
+    user: "1000:1000"
     command: ["na", "/data"]
     environment:
       - PORT=4000
