@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
+    <meta property="og:title" content="{{ fileName }}">
+    <meta property="og:url" content="{{ siteUrl }}{{ currentPath }}">
+    <meta property="og:type" content="website">
+    <meta property="og:description" content="{{ sizeFormatted }} — {{ archiveType | upper }} archive">
+    <meta property="og:site_name" content="FKZ File Index">
+    <meta name="twitter:card" content="summary">
+    <meta name="theme-color" content="#7e5dcc">
     <link rel="stylesheet" href="/static/style.css">
     <link rel="shortcut icon" href="/static/assets/fucker.ico">
 </head>

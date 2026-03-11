@@ -5,11 +5,13 @@ const MIRRORS = {
     mirrorName: "EU site",
     mirrorTag: "NA",
     mirrorUrl: "https://files.femboy.kz",
+    siteUrl: "https://files-na.femboy.kz",
   },
   eu: {
     mirrorName: "NA Site",
     mirrorTag: "EU",
     mirrorUrl: "https://files-na.femboy.kz",
+    siteUrl: "https://files.femboy.kz",
   },
 };
 

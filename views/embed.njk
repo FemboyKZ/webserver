@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta property="og:title" content="{{ fileName }}">
+    <meta property="og:url" content="{{ siteUrl }}{{ currentPath }}">
+    <meta property="og:site_name" content="FKZ File Index">
+    <meta name="theme-color" content="#7e5dcc">
+
+    {% if mediaType == "video" %}
+    <meta property="og:type" content="video.other">
+    <meta property="og:description" content="{{ sizeFormatted }} — {{ ext | upper }} video">
+    <meta property="og:video" content="{{ siteUrl }}{{ currentPath }}?raw=1">
+    <meta property="og:video:type" content="video/{{ mimeSubtype }}">
+    {% if width %}<meta property="og:video:width" content="{{ width }}">{% endif %}
+    {% if height %}<meta property="og:video:height" content="{{ height }}">{% endif %}
+    <meta name="twitter:card" content="player">
+    {% elif mediaType == "audio" %}
+    <meta property="og:type" content="music.song">
+    <meta property="og:description" content="{{ sizeFormatted }} — {{ ext | upper }} audio">
+    <meta property="og:audio" content="{{ siteUrl }}{{ currentPath }}?raw=1">
+    <meta property="og:audio:type" content="audio/{{ mimeSubtype }}">
+    <meta name="twitter:card" content="summary">
+    {% elif mediaType == "image" %}
+    <meta property="og:type" content="article">
+    <meta property="og:description" content="{{ sizeFormatted }} — {{ ext | upper }} image">
+    <meta property="og:image" content="{{ siteUrl }}{{ currentPath }}?raw=1">
+    <meta name="twitter:card" content="summary_large_image">
+    {% else %}
+    <meta property="og:type" content="website">
+    <meta property="og:description" content="{{ sizeFormatted }} — {{ ext | upper }} file">
+    <meta name="twitter:card" content="summary">
+    {% endif %}
+</head>
+<body>
+    <p>Redirecting…</p>
+    <script>window.location.replace({{ currentPath | dump | safe }});</script>
+</body>
+</html>

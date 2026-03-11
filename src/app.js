@@ -85,6 +85,7 @@ const env = nunjucks.configure(path.join(__dirname, "..", "views"), {
 });
 
 env.addGlobal("discordInvite", config.discordInvite);
+env.addGlobal("siteUrl", config.siteUrl);
 
 // Serve static assets (CSS/JS) from /static/
 app.use("/static", express.static(path.join(__dirname, "..", "public")));
@@ -135,6 +136,28 @@ app.get("/{*splat}", async (req, res) => {
         const baseName = path.basename(realPath);
         const nameNoExt = baseName.replace(/\.[^.]+$/, "").toLowerCase();
         const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
+
+        // Minimal embed page via ?embed=1 — for Discord / social media
+        if (req.query.embed === "1") {
+          const embedCtx = {
+            fileName: baseName,
+            sizeFormatted: formatFileSize(stat.size),
+            currentPath: req.path,
+            ext: ext || "unknown",
+          };
+
+          if (VIDEO_EXTENSIONS.has(ext)) {
+            embedCtx.mediaType = "video";
+            embedCtx.mimeSubtype = VIDEO_EXTENSIONS.get(ext);
+          } else if (AUDIO_EXTENSIONS.has(ext)) {
+            embedCtx.mediaType = "audio";
+            embedCtx.mimeSubtype = AUDIO_EXTENSIONS.get(ext);
+          } else if (IMAGE_EXTENSIONS.has(ext)) {
+            embedCtx.mediaType = "image";
+          }
+
+          return res.render("embed.njk", embedCtx);
+        }
 
         if (TEXT_EXTENSIONS.has(ext) || TEXT_EXTENSIONS.has(nameNoExt)) {
           const raw = fs.readFileSync(realPath);
