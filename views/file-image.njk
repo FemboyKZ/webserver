@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,16 +36,7 @@
         <span id="mediaRes"></span>
     </div>
 
-    <script>
-      const img = document.querySelector(".media-preview");
-      function updateInfo() {
-        if (img.naturalWidth) {
-          document.getElementById("mediaRes").textContent =
-            "Resolution: " + img.naturalWidth + " \u00d7 " + img.naturalHeight;
-        }
-      }
-      if (img.complete) updateInfo();
-      else img.addEventListener("load", updateInfo);
-    </script>
+    <script src="/static/helpers.js"></script>
+    <script>initImageResolution();</script>
 </body>
 </html>

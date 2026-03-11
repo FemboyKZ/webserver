@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -61,17 +61,6 @@
         <span>Format: {{ ext | upper }}</span>
         <span id="mediaRes"></span>
     </div>
-    <script>
-      const img = document.querySelector(".media-preview");
-      function updateInfo() {
-        if (img.naturalWidth) {
-          document.getElementById("mediaRes").textContent =
-            "Resolution: " + img.naturalWidth + " \u00d7 " + img.naturalHeight;
-        }
-      }
-      if (img.complete) updateInfo();
-      else img.addEventListener("load", updateInfo);
-    </script>
 
     {% else %}
     <br>
@@ -80,19 +69,9 @@
     <p>No preview available for this file type.</p>
     {% endif %}
 
-    {% if viewType == "text" %}
-    <script>
-    function copyFileContent() {
-        const cells = document.querySelectorAll(".line-text");
-        const text = Array.from(cells).map(c => c.textContent).join("\n");
-        navigator.clipboard.writeText(text).then(() => {
-            const btn = document.getElementById("copy-btn");
-            const original = btn.textContent;
-            btn.textContent = "[Copied!]";
-            setTimeout(() => { btn.textContent = original; }, 1500);
-        });
-    }
-    </script>
+    <script src="/static/helpers.js"></script>
+    {% if viewType == "image" %}
+    <script>initImageResolution();</script>
     {% endif %}
 </body>
 </html>
