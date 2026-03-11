@@ -94,7 +94,7 @@ function getArchiveType(filename) {
   if (lower.endsWith(".tar.bz2")) return "tar.bz2";
   if (lower.endsWith(".tar.xz")) return "tar.xz";
   const ext = path.extname(lower).slice(1);
-  if (["zip", "7z", "tar", "tgz", "tbz2", "bz2"].includes(ext)) return ext;
+  if (["zip", "7z", "tar", "tgz", "tbz2"].includes(ext)) return ext;
   return null;
 }
 
