@@ -16,11 +16,13 @@
   "dependencies": {
     "7zip-min": "^3.0.1",
     "adm-zip": "^0.5.16",
+    "compression": "^1.8.1",
     "express": "^5.2.1",
     "nunjucks": "^3.2.4",
     "tar": "^7.5.11"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "eslint": "^10.0.3",
     "prettier": "^3.8.1"
   }
