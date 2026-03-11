@@ -50,9 +50,10 @@ app.get("/{*splat}", async (req, res) => {
     try {
       const stat = fs.statSync(realPath);
       if (stat.isFile()) {
-        // Raw download via ?raw=1
-        if (req.query.raw === "1") {
-          return res.download(realPath);
+        // Raw download via ?raw=1 or non-browser clients (wget, curl, etc.)
+        const acceptsHtml = req.accepts("html");
+        if (req.query.raw === "1" || !acceptsHtml) {
+          return res.sendFile(realPath);
         }
 
         const ext = path.extname(realPath).replace(/^\./, "").toLowerCase();
