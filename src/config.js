@@ -48,6 +48,7 @@ export default {
     "tmp",
     "stignore",
   ]),
+  maxTextPreviewSize: 10 * 1024 * 1024, // 10 MB
   minFilesForNav: 20,
   minFoldersForNav: 30,
 };

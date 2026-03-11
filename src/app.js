@@ -1,7 +1,8 @@
 import express from "express";
+import compression from "compression";
 import nunjucks from "nunjucks";
 import path from "path";
-import fs from "fs";
+import fs from "fs/promises";
 import { fileURLToPath } from "url";
 import config from "./config.js";
 import {
@@ -73,7 +74,8 @@ const AUDIO_EXTENSIONS = new Map([
   ["opus", "opus"],
 ]);
 
-const BOT_UA = /bot|crawl|spider|preview|embed|slack|discord|telegram|whatsapp|facebook|twitter|og-image/i;
+const BOT_UA =
+  /bot|crawl|spider|preview|embed|slack|discord|telegram|whatsapp|facebook|twitter|og-image/i;
 
 const app = express();
 
@@ -89,8 +91,22 @@ const env = nunjucks.configure(path.join(__dirname, "..", "views"), {
 env.addGlobal("discordInvite", config.discordInvite);
 env.addGlobal("siteUrl", config.siteUrl);
 
-// Serve static assets (CSS/JS) from /static/
-app.use("/static", express.static(path.join(__dirname, "..", "public")));
+// Security headers
+app.use((req, res, next) => {
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("X-Frame-Options", "SAMEORIGIN");
+  res.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+// Gzip/brotli compression
+app.use(compression());
+
+// Serve static assets (CSS/JS) from /static/ with cache headers
+app.use(
+  "/static",
+  express.static(path.join(__dirname, "..", "public"), { maxAge: "1d" }),
+);
 
 // Main browse route — handles all paths
 app.get("/{*splat}", async (req, res) => {
@@ -102,30 +118,26 @@ app.get("/{*splat}", async (req, res) => {
 
     // Path traversal protection (pre-symlink check)
     if (!resolved.startsWith(config.filesRoot)) {
-      return res
-        .status(403)
-        .render("error.njk", {
-          status: "403",
-          message: "You don't have permission to access this path.",
-        });
+      return res.status(403).render("error.njk", {
+        status: "403",
+        message: "You don't have permission to access this path.",
+      });
     }
 
     // Resolve symlinks and check the real path exists
     let realPath;
     try {
-      realPath = fs.realpathSync(resolved);
+      realPath = await fs.realpath(resolved);
     } catch {
-      return res
-        .status(404)
-        .render("error.njk", {
-          status: "404",
-          message: "The file or directory you're looking for doesn't exist.",
-        });
+      return res.status(404).render("error.njk", {
+        status: "404",
+        message: "The file or directory you're looking for doesn't exist.",
+      });
     }
 
     // Check if path is a file — preview or serve
     try {
-      const stat = fs.statSync(realPath);
+      const stat = await fs.stat(realPath);
       if (stat.isFile()) {
         // Raw download via ?raw=1 or non-browser clients (wget, curl, etc.)
         // Skip when ?file= is present (archive entry requests handled below)
@@ -137,7 +149,7 @@ app.get("/{*splat}", async (req, res) => {
         const ext = path.extname(realPath).replace(/^\./, "").toLowerCase();
         const baseName = path.basename(realPath);
         const nameNoExt = baseName.replace(/\.[^.]+$/, "").toLowerCase();
-        const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
+        const parentPath = req.path.replace(/\/[^/]*$/, "/") || "/";
 
         // Minimal embed page via ?embed=1 or bot/crawler user agents
         const ua = req.get("user-agent") || "";
@@ -163,7 +175,20 @@ app.get("/{*splat}", async (req, res) => {
         }
 
         if (TEXT_EXTENSIONS.has(ext) || TEXT_EXTENSIONS.has(nameNoExt)) {
-          const raw = fs.readFileSync(realPath);
+          // Skip text preview for files exceeding size limit
+          if (stat.size > config.maxTextPreviewSize) {
+            return res.render("file-unknown.njk", {
+              title: `FKZ File Index - ${config.mirrorTag} - ${baseName}`,
+              fileName: baseName,
+              sizeFormatted: formatFileSize(stat.size),
+              date: formatFileDate(stat.mtimeMs),
+              currentPath: req.path,
+              parentPath,
+              ext: ext || "unknown",
+            });
+          }
+
+          const raw = await fs.readFile(realPath);
           const content = raw.toString("utf-8");
 
           // Detect line ending type
@@ -258,7 +283,7 @@ app.get("/{*splat}", async (req, res) => {
                 );
                 res.set(
                   "Content-Disposition",
-                  `attachment; filename="${entryBase}"`,
+                  `attachment; filename*=UTF-8''${encodeURIComponent(entryBase)}`,
                 );
                 return res.send(data);
               }
@@ -315,12 +340,10 @@ app.get("/{*splat}", async (req, res) => {
                 viewType: "unknown",
               });
             } catch (err) {
-              return res
-                .status(404)
-                .render("error.njk", {
-                  status: "404",
-                  message: `File not found in archive: ${err.message}`,
-                });
+              return res.status(404).render("error.njk", {
+                status: "404",
+                message: `File not found in archive: ${err.message}`,
+              });
             }
           }
 
@@ -361,12 +384,10 @@ app.get("/{*splat}", async (req, res) => {
         });
       }
     } catch {
-      return res
-        .status(404)
-        .render("error.njk", {
-          status: "404",
-          message: "The file or directory you're looking for doesn't exist.",
-        });
+      return res.status(404).render("error.njk", {
+        status: "404",
+        message: "The file or directory you're looking for doesn't exist.",
+      });
     }
 
     // Redirect to trailing slash for directories
@@ -375,13 +396,17 @@ app.get("/{*splat}", async (req, res) => {
     }
 
     // Check for exclude marker
-    if (fs.existsSync(path.join(realPath, config.excludeMarker))) {
-      return res
-        .status(403)
-        .render("error.njk", {
-          status: "403",
-          message: "You don't have permission to access this directory.",
-        });
+    const markerExists = await fs
+      .access(path.join(realPath, config.excludeMarker))
+      .then(
+        () => true,
+        () => false,
+      );
+    if (markerExists) {
+      return res.status(403).render("error.njk", {
+        status: "403",
+        message: "You don't have permission to access this directory.",
+      });
     }
 
     const { folders, files, filetypes } = await readDirectory(realPath);
@@ -428,13 +453,26 @@ app.get("/{*splat}", async (req, res) => {
     });
   } catch (err) {
     console.error(`Error serving ${req.path}:`, err);
-    res.status(500).send("Internal server error");
+    res.status(500).render("error.njk", {
+      status: "500",
+      message: "Internal server error",
+    });
   }
 });
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(
     `FKZ File Index (${config.mirrorTag}) listening on http://localhost:${config.port}`,
   );
   console.log(`Serving files from: ${config.filesRoot}`);
 });
+
+function shutdown() {
+  console.log("Shutting down gracefully...");
+  server.close(() => {
+    process.exit(0);
+  });
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
