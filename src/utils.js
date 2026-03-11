@@ -108,7 +108,14 @@ function sanitizeEntryName(name) {
     .join("/");
 }
 
-const TAR_TYPES = new Set(["tar", "tar.gz", "tar.bz2", "tar.xz", "tgz", "tbz2"]);
+const TAR_TYPES = new Set([
+  "tar",
+  "tar.gz",
+  "tar.bz2",
+  "tar.xz",
+  "tgz",
+  "tbz2",
+]);
 
 async function listArchiveContents(filePath) {
   const archiveType = getArchiveType(path.basename(filePath));
@@ -163,12 +170,10 @@ async function listArchiveContents(filePath) {
               name,
               size: parseInt(entry.size) || 0,
               compressedSize: parseInt(entry.compressed) || 0,
-              isDirectory:
-                entry.attr?.startsWith("D") || name.endsWith("/"),
-              date: entry.dateTime ||
-                (entry.date
-                  ? `${entry.date} ${entry.time || ""}`.trim()
-                  : ""),
+              isDirectory: entry.attr?.startsWith("D") || name.endsWith("/"),
+              date:
+                entry.dateTime ||
+                (entry.date ? `${entry.date} ${entry.time || ""}`.trim() : ""),
             };
           })
           .filter((e) => e.name),
@@ -217,7 +222,8 @@ async function extractFileFromArchive(archivePath, entryPath) {
   if (archiveType === "zip") {
     const zip = new AdmZip(archivePath);
     const entry = zip.getEntry(sanitized) || zip.getEntry(sanitized + "/");
-    if (!entry || entry.isDirectory) throw new Error("File not found in archive");
+    if (!entry || entry.isDirectory)
+      throw new Error("File not found in archive");
     return entry.getData();
   }
 
@@ -241,7 +247,10 @@ async function extractFileFromArchive(archivePath, entryPath) {
   // 7z: extract to temp dir, read file, clean up
   const os = await import("os");
   const crypto = await import("crypto");
-  const tmpDir = path.join(os.default.tmpdir(), "fkz-" + crypto.default.randomBytes(8).toString("hex"));
+  const tmpDir = path.join(
+    os.default.tmpdir(),
+    "fkz-" + crypto.default.randomBytes(8).toString("hex"),
+  );
   await fs.mkdir(tmpDir, { recursive: true });
   try {
     await new Promise((resolve, reject) => {

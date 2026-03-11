@@ -74,8 +74,9 @@ function populateMediaInfo(mediaEl) {
     const sampleRateEl = document.getElementById("mediaSampleRate");
     if (channelsEl || sampleRateEl) {
       try {
-        const audioCtx = new (window.AudioContext ||
-          window.webkitAudioContext)();
+        const audioCtx = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
         const source = audioCtx.createMediaElementSource(mediaEl);
         source.connect(audioCtx.destination);
         if (channelsEl) {

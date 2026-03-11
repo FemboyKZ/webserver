@@ -4,28 +4,73 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import config from "./config.js";
-import { readDirectory, formatFileSize, formatFileDate, getArchiveType, sanitizeEntryName, listArchiveContents, buildArchiveTree, extractFileFromArchive } from "./utils.js";
+import {
+  readDirectory,
+  formatFileSize,
+  formatFileDate,
+  getArchiveType,
+  sanitizeEntryName,
+  listArchiveContents,
+  buildArchiveTree,
+  extractFileFromArchive,
+} from "./utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const TEXT_EXTENSIONS = new Set([
-  "txt", "md", "log", "cfg", "conf", "ini", "yml", "yaml",
-  "toml", "json", "xml", "csv", "tsv", "env", "gitignore",
-  "dockerfile", "makefile", "rst", "tex", "bat", "cmd",
+  "txt",
+  "md",
+  "log",
+  "cfg",
+  "conf",
+  "ini",
+  "yml",
+  "yaml",
+  "toml",
+  "json",
+  "xml",
+  "csv",
+  "tsv",
+  "env",
+  "gitignore",
+  "dockerfile",
+  "makefile",
+  "rst",
+  "tex",
+  "bat",
+  "cmd",
 ]);
 
 const IMAGE_EXTENSIONS = new Set([
-  "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico", "avif",
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "bmp",
+  "webp",
+  "svg",
+  "ico",
+  "avif",
 ]);
 
 const VIDEO_EXTENSIONS = new Map([
-  ["mp4", "mp4"], ["webm", "webm"], ["ogv", "ogg"], ["mov", "mp4"],
-  ["mkv", "x-matroska"], ["avi", "x-msvideo"],
+  ["mp4", "mp4"],
+  ["webm", "webm"],
+  ["ogv", "ogg"],
+  ["mov", "mp4"],
+  ["mkv", "x-matroska"],
+  ["avi", "x-msvideo"],
 ]);
 
 const AUDIO_EXTENSIONS = new Map([
-  ["mp3", "mpeg"], ["ogg", "ogg"], ["wav", "wav"], ["flac", "flac"],
-  ["aac", "aac"], ["m4a", "mp4"], ["wma", "x-ms-wma"], ["opus", "opus"],
+  ["mp3", "mpeg"],
+  ["ogg", "ogg"],
+  ["wav", "wav"],
+  ["flac", "flac"],
+  ["aac", "aac"],
+  ["m4a", "mp4"],
+  ["wma", "x-ms-wma"],
+  ["opus", "opus"],
 ]);
 
 const app = express();
@@ -49,7 +94,12 @@ app.get("/{*splat}", async (req, res) => {
 
     // Path traversal protection (pre-symlink check)
     if (!resolved.startsWith(config.filesRoot)) {
-      return res.status(403).render("error.njk", { status: "403", message: "You don't have permission to access this path." });
+      return res
+        .status(403)
+        .render("error.njk", {
+          status: "403",
+          message: "You don't have permission to access this path.",
+        });
     }
 
     // Resolve symlinks and check the real path exists
@@ -57,7 +107,12 @@ app.get("/{*splat}", async (req, res) => {
     try {
       realPath = fs.realpathSync(resolved);
     } catch {
-      return res.status(404).render("error.njk", { status: "404", message: "The file or directory you're looking for doesn't exist." });
+      return res
+        .status(404)
+        .render("error.njk", {
+          status: "404",
+          message: "The file or directory you're looking for doesn't exist.",
+        });
     }
 
     // Check if path is a file — preview or serve
@@ -86,7 +141,7 @@ app.get("/{*splat}", async (req, res) => {
           const lineEnding = hasCRLF ? "CRLF" : hasCR ? "CR" : "LF";
 
           // Detect encoding (check for UTF-8 BOM or assume UTF-8)
-          const hasBOM = raw[0] === 0xEF && raw[1] === 0xBB && raw[2] === 0xBF;
+          const hasBOM = raw[0] === 0xef && raw[1] === 0xbb && raw[2] === 0xbf;
           const encoding = hasBOM ? "UTF-8 (BOM)" : "UTF-8";
 
           const lines = content.split(/\r\n|\r|\n/);
@@ -147,24 +202,39 @@ app.get("/{*splat}", async (req, res) => {
             try {
               const data = await extractFileFromArchive(realPath, fileParam);
               const entryName = sanitizeEntryName(fileParam);
-              const entryExt = path.extname(entryName).replace(/^\./, "").toLowerCase();
+              const entryExt = path
+                .extname(entryName)
+                .replace(/^\./, "")
+                .toLowerCase();
               const entryBase = path.basename(entryName);
 
               // Raw download
               if (req.query.raw === "1") {
                 const mime = {
-                  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-                  gif: "image/gif", bmp: "image/bmp", webp: "image/webp",
-                  svg: "image/svg+xml", ico: "image/x-icon", avif: "image/avif",
+                  jpg: "image/jpeg",
+                  jpeg: "image/jpeg",
+                  png: "image/png",
+                  gif: "image/gif",
+                  bmp: "image/bmp",
+                  webp: "image/webp",
+                  svg: "image/svg+xml",
+                  ico: "image/x-icon",
+                  avif: "image/avif",
                 };
-                res.set("Content-Type", mime[entryExt] || "application/octet-stream");
-                res.set("Content-Disposition", `attachment; filename="${entryBase}"`);
+                res.set(
+                  "Content-Type",
+                  mime[entryExt] || "application/octet-stream",
+                );
+                res.set(
+                  "Content-Disposition",
+                  `attachment; filename="${entryBase}"`,
+                );
                 return res.send(data);
               }
 
               // Find entry metadata
               const entries = await listArchiveContents(realPath);
-              const entryMeta = entries.find(e => e.name === entryName) || {};
+              const entryMeta = entries.find((e) => e.name === entryName) || {};
 
               const viewCtx = {
                 title: `FKZ File Index - ${config.mirrorTag} - ${baseName} - ${entryBase}`,
@@ -178,7 +248,12 @@ app.get("/{*splat}", async (req, res) => {
               };
 
               // Text preview
-              if (TEXT_EXTENSIONS.has(entryExt) || TEXT_EXTENSIONS.has(entryBase.replace(/\.[^.]+$/, "").toLowerCase())) {
+              if (
+                TEXT_EXTENSIONS.has(entryExt) ||
+                TEXT_EXTENSIONS.has(
+                  entryBase.replace(/\.[^.]+$/, "").toLowerCase(),
+                )
+              ) {
                 const content = data.toString("utf-8");
                 const hasCRLF = content.includes("\r\n");
                 const hasCR = !hasCRLF && content.includes("\r");
@@ -209,14 +284,23 @@ app.get("/{*splat}", async (req, res) => {
                 viewType: "unknown",
               });
             } catch (err) {
-              return res.status(404).render("error.njk", { status: "404", message: `File not found in archive: ${err.message}` });
+              return res
+                .status(404)
+                .render("error.njk", {
+                  status: "404",
+                  message: `File not found in archive: ${err.message}`,
+                });
             }
           }
 
           // List archive contents
           try {
             const entries = await listArchiveContents(realPath);
-            const { dirs, files: archiveFiles, totalSize: totalUncompressed } = buildArchiveTree(entries);
+            const {
+              dirs,
+              files: archiveFiles,
+              totalSize: totalUncompressed,
+            } = buildArchiveTree(entries);
             return res.render("file-archive.njk", {
               ...mediaCtx,
               archiveType,
@@ -246,7 +330,12 @@ app.get("/{*splat}", async (req, res) => {
         });
       }
     } catch {
-      return res.status(404).render("error.njk", { status: "404", message: "The file or directory you're looking for doesn't exist." });
+      return res
+        .status(404)
+        .render("error.njk", {
+          status: "404",
+          message: "The file or directory you're looking for doesn't exist.",
+        });
     }
 
     // Redirect to trailing slash for directories
@@ -256,7 +345,12 @@ app.get("/{*splat}", async (req, res) => {
 
     // Check for exclude marker
     if (fs.existsSync(path.join(realPath, config.excludeMarker))) {
-      return res.status(403).render("error.njk", { status: "403", message: "You don't have permission to access this directory." });
+      return res
+        .status(403)
+        .render("error.njk", {
+          status: "403",
+          message: "You don't have permission to access this directory.",
+        });
     }
 
     const { folders, files, filetypes } = await readDirectory(realPath);

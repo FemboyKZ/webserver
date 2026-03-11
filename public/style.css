@@ -185,7 +185,9 @@ li {
   flex-shrink: 0;
   border: none;
   border-top: 1px solid rgb(255, 80, 164);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 .player:fullscreen.controls-hidden .player-controls {
   opacity: 0;
