@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+</head>
+<body>
+    <h1>{{ fileName }}</h1>
+
+    <nav>
+        <a href="{{ parentPath }}">[Go Back]</a> |
+        <a href="{{ currentPath }}?raw=1">[Download]</a>
+    </nav>
+    <br>
+
+    <span class="file-meta">[{{ sizeFormatted }}] {{ date }}</span>
+    <br><br>
+
+    <div class="media-container player">
+        <video preload="metadata" class="media-preview">
+            <source src="{{ currentPath }}?raw=1" type="video/{{ mimeSubtype }}">
+            Your browser does not support video playback.
+        </video>
+        <div class="player-controls">
+            <button class="player-play"><i data-lucide="play"></i></button>
+            <span class="player-time-current">0:00</span>
+            <div class="player-progress">
+                <div class="player-progress-buffer"></div>
+                <div class="player-progress-fill"></div>
+            </div>
+            <span class="player-time-duration">0:00</span>
+            <button class="player-mute"><i data-lucide="volume-2"></i></button>
+            <input type="range" class="player-volume" min="0" max="1" step="0.05" value="1">
+            <button class="player-fullscreen"><i data-lucide="maximize"></i></button>
+        </div>
+    </div>
+
+    <div class="media-info">
+        <span>Format: {{ ext | upper }}</span>
+        <span id="mediaRes"></span>
+        <span id="mediaDuration"></span>
+        <span id="mediaFps"></span>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script>lucide.createIcons();</script>
+    <script src="/static/player.js"></script>
+</body>
+</html>

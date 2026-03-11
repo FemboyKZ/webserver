@@ -14,6 +14,20 @@ const TEXT_EXTENSIONS = new Set([
   "dockerfile", "makefile", "rst", "tex", "bat", "cmd",
 ]);
 
+const IMAGE_EXTENSIONS = new Set([
+  "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico", "avif",
+]);
+
+const VIDEO_EXTENSIONS = new Map([
+  ["mp4", "mp4"], ["webm", "webm"], ["ogv", "ogg"], ["mov", "mp4"],
+  ["mkv", "x-matroska"], ["avi", "x-msvideo"],
+]);
+
+const AUDIO_EXTENSIONS = new Map([
+  ["mp3", "mpeg"], ["ogg", "ogg"], ["wav", "wav"], ["flac", "flac"],
+  ["aac", "aac"], ["m4a", "mp4"], ["wma", "x-ms-wma"], ["opus", "opus"],
+]);
+
 const app = express();
 
 // Nunjucks setup
@@ -35,7 +49,7 @@ app.get("/{*splat}", async (req, res) => {
 
     // Path traversal protection (pre-symlink check)
     if (!resolved.startsWith(config.filesRoot)) {
-      return res.status(403).send("Forbidden");
+      return res.status(403).render("error.njk", { status: "403", message: "You don't have permission to access this path." });
     }
 
     // Resolve symlinks and check the real path exists
@@ -43,7 +57,7 @@ app.get("/{*splat}", async (req, res) => {
     try {
       realPath = fs.realpathSync(resolved);
     } catch {
-      return res.status(404).send("Not found");
+      return res.status(404).render("error.njk", { status: "404", message: "The file or directory you're looking for doesn't exist." });
     }
 
     // Check if path is a file — preview or serve
@@ -96,18 +110,42 @@ app.get("/{*splat}", async (req, res) => {
         }
 
         const parentPath = req.path.replace(/\/[^\/]*$/, "/") || "/";
-        return res.render("file-unknown.njk", {
+        const mediaCtx = {
           title: `FKZ File Index - ${config.mirrorTag} - ${baseName}`,
           fileName: baseName,
-          ext: ext || "unknown",
           sizeFormatted: formatFileSize(stat.size),
           date: formatFileDate(stat.mtimeMs),
           currentPath: req.path,
           parentPath,
+        };
+
+        if (IMAGE_EXTENSIONS.has(ext)) {
+          return res.render("file-image.njk", { ...mediaCtx, ext });
+        }
+
+        if (VIDEO_EXTENSIONS.has(ext)) {
+          return res.render("file-video.njk", {
+            ...mediaCtx,
+            ext,
+            mimeSubtype: VIDEO_EXTENSIONS.get(ext),
+          });
+        }
+
+        if (AUDIO_EXTENSIONS.has(ext)) {
+          return res.render("file-audio.njk", {
+            ...mediaCtx,
+            ext,
+            mimeSubtype: AUDIO_EXTENSIONS.get(ext),
+          });
+        }
+
+        return res.render("file-unknown.njk", {
+          ...mediaCtx,
+          ext: ext || "unknown",
         });
       }
     } catch {
-      return res.status(404).send("Not found");
+      return res.status(404).render("error.njk", { status: "404", message: "The file or directory you're looking for doesn't exist." });
     }
 
     // Redirect to trailing slash for directories
@@ -117,7 +155,7 @@ app.get("/{*splat}", async (req, res) => {
 
     // Check for exclude marker
     if (fs.existsSync(path.join(realPath, config.excludeMarker))) {
-      return res.status(403).send("Forbidden");
+      return res.status(403).render("error.njk", { status: "403", message: "You don't have permission to access this directory." });
     }
 
     const { folders, files, filetypes } = await readDirectory(realPath);

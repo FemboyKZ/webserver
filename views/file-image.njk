@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="shortcut icon" href="/static/assets/fucker.ico">
+</head>
+<body>
+    <h1>{{ fileName }}</h1>
+
+    <nav>
+        <a href="{{ parentPath }}">[Go Back]</a> |
+        <a href="{{ currentPath }}?raw=1">[Download]</a>
+    </nav>
+    <br>
+
+    <span class="file-meta">[{{ sizeFormatted }}] {{ date }}</span>
+    <br><br>
+
+    <div class="media-container">
+        <img src="{{ currentPath }}?raw=1" alt="{{ fileName }}" class="media-preview">
+    </div>
+
+    <div class="media-info">
+        <span>Format: {{ ext | upper }}</span>
+        <span id="mediaRes"></span>
+    </div>
+
+    <script>
+      const img = document.querySelector(".media-preview");
+      function updateInfo() {
+        if (img.naturalWidth) {
+          document.getElementById("mediaRes").textContent =
+            "Resolution: " + img.naturalWidth + " \u00d7 " + img.naturalHeight;
+        }
+      }
+      if (img.complete) updateInfo();
+      else img.addEventListener("load", updateInfo);
+    </script>
+</body>
+</html>
