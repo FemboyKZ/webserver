@@ -3,7 +3,12 @@ npm-debug.log*
 .git
 .gitignore
 eslint.config.js
+docker-compose*.yml
+data
 *.md
+!README.md
 *.py
 EXCLUDE_FOLDER
 LICENSE
+.prettier*
+.eslint*
