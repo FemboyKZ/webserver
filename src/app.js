@@ -89,6 +89,7 @@ const env = nunjucks.configure(path.join(__dirname, "..", "views"), {
 });
 
 env.addGlobal("discordInvite", config.discordInvite);
+env.addGlobal("repoUrl", config.repoUrl);
 env.addGlobal("siteUrl", config.siteUrl);
 
 // Security headers
