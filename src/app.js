@@ -202,10 +202,13 @@ app.get("/{*splat}", async (req, res) => {
     try {
       const stat = await fs.stat(realPath);
       if (stat.isFile()) {
-        // Raw download via ?raw=1 or non-browser clients (wget, curl, etc.)
+        // Raw download via ?raw=1 or non-browser clients (wget, curl, game engines, etc.)
         // Skip when ?file= is present (archive entry requests handled below)
-        const acceptsHtml = req.accepts("html");
-        if ((req.query.raw === "1" || !acceptsHtml) && !req.query.file) {
+        // Check for explicit text/html in Accept header instead of req.accepts()
+        // because req.accepts("html") returns true for */* which game clients send
+        const acceptHeader = req.get("Accept") || "";
+        const wantsHtml = acceptHeader.includes("text/html");
+        if ((req.query.raw === "1" || !wantsHtml) && !req.query.file) {
           return res.sendFile(realPath);
         }
 
