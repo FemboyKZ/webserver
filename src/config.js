@@ -39,7 +39,7 @@ export default {
   excludeMarker: "EXCLUDE_FOLDER",
   ignoredFiletypes: new Set(["htaccess", "tmp", "stignore"]),
   maxTextPreviewSize: 10 * 1024 * 1024, // 10 MB
-  maxArchiveExtractSize: 100 * 1024 * 1024, // 100 MB
+  maxArchiveExtractSize: 5 * 1000 * 1024 * 1024, // 5 GB
   minFilesForNav: 20,
   minFoldersForNav: 30,
 };
