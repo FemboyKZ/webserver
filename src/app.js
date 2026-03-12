@@ -133,6 +133,32 @@ async function buildAssetVersions(dir, prefix = "") {
 await buildAssetVersions(publicDir);
 env.addGlobal("assetV", (file) => assetVersions.get(file) || "");
 
+// Archive content cache (sha256 → entries), persisted to disk
+const archiveCacheDir = path.join(__dirname, "..", ".cache", "archives");
+await fs.mkdir(archiveCacheDir, { recursive: true });
+const archiveContentCache = new Map();
+
+async function getOrListArchiveContents(filePath, sha256) {
+  if (archiveContentCache.has(sha256)) {
+    return archiveContentCache.get(sha256);
+  }
+
+  const cachePath = path.join(archiveCacheDir, `${sha256}.json`);
+  try {
+    const cached = await fs.readFile(cachePath, "utf-8");
+    const entries = JSON.parse(cached);
+    archiveContentCache.set(sha256, entries);
+    return entries;
+  } catch {
+    // Cache miss on disk
+  }
+
+  const entries = await listArchiveContents(filePath);
+  archiveContentCache.set(sha256, entries);
+  fs.writeFile(cachePath, JSON.stringify(entries)).catch(() => {});
+  return entries;
+}
+
 // Security headers
 app.use((req, res, next) => {
   res.set("X-Content-Type-Options", "nosniff");
@@ -370,8 +396,8 @@ app.get("/{*splat}", async (req, res) => {
                 return res.send(data);
               }
 
-              // Find entry metadata
-              const entries = await listArchiveContents(realPath);
+              // Find entry metadata (cached by archive checksum)
+              const entries = await getOrListArchiveContents(realPath, sha256);
               const entryMeta = entries.find((e) => e.name === entryName) || {};
 
               const viewCtx = {
@@ -430,9 +456,9 @@ app.get("/{*splat}", async (req, res) => {
             }
           }
 
-          // List archive contents
+          // List archive contents (cached by archive checksum)
           try {
-            const entries = await listArchiveContents(realPath);
+            const entries = await getOrListArchiveContents(realPath, sha256);
             const {
               dirs,
               files: archiveFiles,

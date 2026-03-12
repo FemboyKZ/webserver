@@ -11,4 +11,8 @@ services:
     stdin_open: true
     tty: true
     volumes:
+      - archive-cache:/app/.cache
       - /path/to/files:/data
+
+volumes:
+  archive-cache:
