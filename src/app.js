@@ -189,6 +189,13 @@ app.use(
   express.static(path.join(__dirname, "..", "public"), { maxAge: "1d" }),
 );
 
+// Favicon
+app.get("/favicon.ico", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "assets", "fucker.ico"), {
+    maxAge: "7d",
+  });
+});
+
 // Main browse route — handles all paths
 app.get("/{*splat}", async (req, res) => {
   try {
@@ -235,7 +242,14 @@ app.get("/{*splat}", async (req, res) => {
         const acceptHeader = req.get("Accept") || "";
         const wantsHtml = acceptHeader.includes("text/html");
         if ((req.query.raw === "1" || !wantsHtml) && !req.query.file) {
-          return res.sendFile(realPath);
+          return res.sendFile(realPath, (err) => {
+            if (!err || res.headersSent) return;
+            if (err.status === 416) {
+              res.status(416).end();
+            } else {
+              res.status(err.status || 500).end();
+            }
+          });
         }
 
         const ext = path.extname(realPath).replace(/^\./, "").toLowerCase();
@@ -244,8 +258,12 @@ app.get("/{*splat}", async (req, res) => {
         const parentPath = req.path.replace(/\/[^/]*$/, "/") || "/";
 
         // Minimal embed page via ?embed=1 or bot/crawler user agents
+        // Real browsers send Sec-Fetch-Mode: navigate; bots/crawlers do not.
+        // Skip embed for real browser navigations (e.g. Discord in-app browser)
+        // to prevent a redirect loop.
         const ua = req.get("user-agent") || "";
-        if (req.query.embed === "1" || BOT_UA.test(ua)) {
+        const isRealBrowser = req.get("Sec-Fetch-Mode") === "navigate";
+        if ((req.query.embed === "1" || BOT_UA.test(ua)) && !isRealBrowser) {
           // Normalize path to prevent open redirect via // protocol-relative URLs
           const safePath = "/" + req.path.replace(/^\/+/, "");
           const embedCtx = {
@@ -265,6 +283,8 @@ app.get("/{*splat}", async (req, res) => {
             embedCtx.mediaType = "image";
           }
 
+          res.set("Cache-Control", "private, no-store");
+          res.set("Vary", "User-Agent");
           return res.render("embed.njk", embedCtx);
         }
 
@@ -567,6 +587,22 @@ app.get("/{*splat}", async (req, res) => {
       message: "Internal server error",
     });
   }
+});
+
+// Error-handling middleware for URIError (bad param encoding) and other unhandled errors
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  if (err instanceof URIError) {
+    return res.status(400).render("error.njk", {
+      status: "400",
+      message: "Invalid URL encoding.",
+    });
+  }
+  console.error(`Unhandled error for ${req.path}:`, err);
+  res.status(err.status || 500).render("error.njk", {
+    status: String(err.status || 500),
+    message: "Internal server error",
+  });
 });
 
 const server = app.listen(config.port, () => {
