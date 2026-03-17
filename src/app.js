@@ -256,7 +256,12 @@ app.get("/{*splat}", async (req, res) => {
         const baseName = path.basename(realPath);
         const nameNoExt = baseName.replace(/\.[^.]+$/, "").toLowerCase();
         const parentPath = req.path.replace(/\/[^/]*$/, "/") || "/";
-
+        // All HTML responses below are for file URLs that also serve raw binary
+        // via sendFile (above). CDNs like Cloudflare don't vary cache on Accept,
+        // so a cached HTML response would be served to game clients expecting
+        // binary data. Prevent CDN edge caching for all HTML file responses.
+        res.set("CDN-Cache-Control", "no-store");
+        res.set("Cache-Control", "private, no-cache");
         // Minimal embed page via ?embed=1 or bot/crawler user agents
         // Real browsers send Sec-Fetch-Mode: navigate; bots/crawlers do not.
         // Skip embed for real browser navigations (e.g. Discord in-app browser)
@@ -284,7 +289,6 @@ app.get("/{*splat}", async (req, res) => {
           }
 
           res.set("Cache-Control", "private, no-store");
-          res.set("Vary", "User-Agent");
           return res.render("embed.njk", embedCtx);
         }
 
