@@ -26,6 +26,7 @@ if (!site || !MIRRORS[site]) {
 
 const FILES_ROOT = path.resolve(process.argv[3] || ".");
 const PORT = parseInt(process.env.PORT, 10) || 3000;
+const LOG_MAX_SIZE = parseInt(process.env.LOG_MAX_SIZE, 10) || 50 * 1024 * 1024; // 50 MB
 
 const DISCORD_INVITE = "https://discord.gg/fkz";
 const REPO_URL = "https://github.com/FemboyKZ/webserver";
@@ -42,4 +43,5 @@ export default {
   maxArchiveExtractSize: 5 * 1000 * 1024 * 1024, // 5 GB
   minFilesForNav: 20,
   minFoldersForNav: 30,
+  logMaxSize: LOG_MAX_SIZE,
 };

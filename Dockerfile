@@ -9,9 +9,13 @@ COPY src/ src/
 COPY views/ views/
 COPY public/ public/
 
-RUN mkdir -p .cache/archives && chown -R node:node .cache
+ARG UID=1000
+ARG GID=1000
 
-USER node
+RUN mkdir -p .cache/archives logs
+RUN chown -R ${UID}:${GID} /app
+
+USER ${UID}:${GID}
 
 EXPOSE 4000
 

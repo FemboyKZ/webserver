@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import nunjucks from "nunjucks";
 import path from "path";
 import fs from "fs/promises";
+import { createWriteStream } from "fs";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
 import config from "./config.js";
@@ -97,6 +98,41 @@ const app = express();
 
 // Trust reverse proxy (Apache) for correct protocol/host in redirects
 app.set("trust proxy", 1);
+
+// Access logging with file rotation
+const logDir = path.join(__dirname, "..", "logs");
+await fs.mkdir(logDir, { recursive: true });
+
+let accessLogStream = null;
+let accessLogSize = 0;
+
+function openAccessLog() {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const logPath = path.join(logDir, `access-${timestamp}.log`);
+  accessLogStream = createWriteStream(logPath, { flags: "a" });
+  accessLogSize = 0;
+}
+
+openAccessLog();
+
+function rotateIfNeeded() {
+  if (accessLogSize >= config.logMaxSize) {
+    accessLogStream.end();
+    openAccessLog();
+  }
+}
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const line = `${new Date().toISOString()} ${req.ip} ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms "${req.get("user-agent") || "-"}"\n`;
+    accessLogStream.write(line);
+    accessLogSize += Buffer.byteLength(line);
+    rotateIfNeeded();
+  });
+  next();
+});
 
 // Nunjucks setup
 const env = nunjucks.configure(path.join(__dirname, "..", "views"), {

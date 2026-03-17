@@ -1,6 +1,6 @@
 services:
   webserver:
-    build: .
+    image: webserver
     ports:
       - "4000:4000"
     user: "1000:1000"
@@ -12,7 +12,9 @@ services:
     tty: true
     volumes:
       - archive-cache:/app/.cache
+      - logs:/app/logs
       - /path/to/files:/data
 
 volumes:
   archive-cache:
+  logs:
