@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="0;url={{ currentPath }}?raw=1">
     <meta property="og:title" content="{{ fileName }}">
     <meta property="og:url" content="{{ siteUrl }}{{ currentPath }}">
     <meta property="og:site_name" content="FKZ File Index">
@@ -34,6 +35,7 @@
 </head>
 <body>
     <p>Redirecting…</p>
-    <script>window.location.replace({{ currentPath | dump | replace("</", "<\\/") | safe }});</script>
+    <noscript><a href="{{ currentPath }}?raw=1">Click here</a></noscript>
+    <script>window.location.replace({{ (currentPath + "?raw=1") | dump | replace("</", "<\\/") | safe }});</script>
 </body>
 </html>
