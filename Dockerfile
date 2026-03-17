@@ -9,6 +9,8 @@ COPY src/ src/
 COPY views/ views/
 COPY public/ public/
 
+RUN mkdir -p .cache/archives && chown -R node:node .cache
+
 USER node
 
 EXPOSE 4000
