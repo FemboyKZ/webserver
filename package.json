@@ -15,16 +15,16 @@
   },
   "dependencies": {
     "7zip-min": "^3.0.1",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.5.17",
     "compression": "^1.8.1",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.3.1",
+    "express-rate-limit": "^8.3.2",
     "nunjucks": "^3.2.4",
     "tar": "^7.5.13"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.1.0",
+    "eslint": "^10.2.0",
     "prettier": "^3.8.1"
   }
 }
