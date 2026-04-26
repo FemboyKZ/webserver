@@ -18,7 +18,7 @@
     "adm-zip": "^0.5.17",
     "compression": "^1.8.1",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.3.2",
+    "express-rate-limit": "^8.4.1",
     "nunjucks": "^3.2.4",
     "tar": "^7.5.13"
   },
