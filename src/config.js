@@ -4,14 +4,14 @@ const MIRRORS = {
   na: {
     mirrorName: "EU site",
     mirrorTag: "NA",
-    mirrorUrl: "https://files.femboy.kz",
-    siteUrl: "https://files-na.femboy.kz",
+    mirrorUrl: "https://files.femboykz.com",
+    siteUrl: "https://files-na.femboykz.com",
   },
   eu: {
     mirrorName: "NA Site",
     mirrorTag: "EU",
-    mirrorUrl: "https://files-na.femboy.kz",
-    siteUrl: "https://files.femboy.kz",
+    mirrorUrl: "https://files-na.femboykz.com",
+    siteUrl: "https://files.femboykz.com",
   },
 };
 
