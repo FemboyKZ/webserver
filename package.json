@@ -20,7 +20,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "nunjucks": "^3.2.4",
-    "tar": "^7.5.15"
+    "tar": "^7.5.16"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
