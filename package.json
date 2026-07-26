@@ -18,13 +18,13 @@
     "adm-zip": "^0.6.0",
     "compression": "^1.8.1",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.5.2",
+    "express-rate-limit": "^8.6.0",
     "nunjucks": "^3.2.4",
-    "tar": "^7.5.20"
+    "tar": "^7.5.22"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.7.0",
-    "prettier": "^3.9.5"
+    "eslint": "^10.8.0",
+    "prettier": "^3.9.6"
   }
 }
