@@ -1,63 +1,65 @@
-let currentSort = "name";
-let sortAsc = true;
-
-function sortFiles(key) {
+(function () {
   const list = document.getElementById("file-list");
-  if (!list) return;
-  if (currentSort === key) {
-    sortAsc = !sortAsc;
-  } else {
-    currentSort = key;
-    sortAsc = true;
-  }
-  const items = Array.from(list.querySelectorAll("li[data-name]"));
-  items.sort((a, b) => {
-    let va, vb;
-    if (key === "size") {
-      va = parseInt(a.dataset.size, 10) || 0;
-      vb = parseInt(b.dataset.size, 10) || 0;
-    } else if (key === "date") {
-      va = a.dataset.date || "";
-      vb = b.dataset.date || "";
-    } else {
-      va = a.dataset.name || "";
-      vb = b.dataset.name || "";
-    }
-    const cmp = va < vb ? -1 : va > vb ? 1 : 0;
-    return sortAsc ? cmp : -cmp;
+  const ctrl = document.querySelector(".sort-controls");
+  if (!list || !ctrl) return;
+
+  const rows = Array.from(list.children).map((el) => {
+    const link = el.querySelector("a");
+    return {
+      el,
+      name: (link ? link.textContent : el.textContent).toLowerCase(),
+      size: parseInt(el.dataset.size, 10) || 0,
+      date: el.dataset.date || "",
+    };
   });
-  const frag = document.createDocumentFragment();
-  items.forEach((item) => frag.appendChild(item));
-  list.appendChild(frag);
-  document.querySelectorAll(".sort-controls a").forEach((a) => {
-    a.classList.toggle("sort-active", a.dataset.sortkey === key);
-    if (a.dataset.sortkey === key) {
-      a.textContent =
+
+  const buttons = Array.from(ctrl.querySelectorAll("a[data-sortkey]"));
+  let currentSort = "name";
+  let sortAsc = true;
+
+  function updateButtons() {
+    for (const button of buttons) {
+      const key = button.dataset.sortkey;
+      const active = key === currentSort;
+      const arrow = sortAsc ? " ▲" : " ▼";
+      button.classList.toggle("sort-active", active);
+      button.textContent =
         "[" +
         key.charAt(0).toUpperCase() +
         key.slice(1) +
-        (sortAsc ? " \u25B2" : " \u25BC") +
-        "]";
-    } else {
-      a.textContent =
-        "[" +
-        a.dataset.sortkey.charAt(0).toUpperCase() +
-        a.dataset.sortkey.slice(1) +
+        (active ? arrow : "") +
         "]";
     }
-  });
-}
+  }
 
-document.addEventListener("DOMContentLoaded", function () {
-  const ctrl = document.querySelector(".sort-controls");
-  if (ctrl) {
-    const nameBtn = ctrl.querySelector('a[data-sortkey="name"]');
-    if (nameBtn) nameBtn.classList.add("sort-active");
-    ctrl.querySelectorAll("a[data-sortkey]").forEach((a) => {
-      a.addEventListener("click", function (e) {
-        e.preventDefault();
-        sortFiles(this.dataset.sortkey);
-      });
+  function sortFiles(key) {
+    if (currentSort === key) {
+      sortAsc = !sortAsc;
+    } else {
+      currentSort = key;
+      sortAsc = true;
+    }
+
+    rows.sort((a, b) => {
+      const va = a[key];
+      const vb = b[key];
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+      return sortAsc ? cmp : -cmp;
+    });
+
+    const frag = document.createDocumentFragment();
+    for (const row of rows) frag.appendChild(row.el);
+    list.appendChild(frag);
+
+    updateButtons();
+  }
+
+  for (const button of buttons) {
+    button.addEventListener("click", (e) => {
+      e.preventDefault();
+      sortFiles(button.dataset.sortkey);
     });
   }
-});
+
+  updateButtons();
+})();

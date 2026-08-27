@@ -28,13 +28,30 @@ function formatFileDate(mtime) {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
+const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+const byName = (a, b) => collator.compare(a.name, b.name);
+
+const STAT_CONCURRENCY = 64;
+
+async function runConcurrent(items, limit, fn) {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      await fn(items[next++]);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+}
+
 async function readDirectory(dirPath) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
   const folders = [];
   const files = [];
 
-  for (const entry of entries) {
+  await runConcurrent(entries, STAT_CONCURRENCY, async (entry) => {
     const fullPath = path.join(dirPath, entry.name);
 
     // Resolve symlinks to determine actual type
@@ -46,42 +63,42 @@ async function readDirectory(dirPath) {
         isDir = stat.isDirectory();
         isFile = stat.isFile();
       } catch {
-        continue; // broken symlink
+        return; // broken symlink
       }
     }
 
     if (isDir) {
-      try {
-        await fs.access(path.join(fullPath, config.excludeMarker));
-        // Marker exists — skip this folder
-      } catch {
-        folders.push({ name: entry.name });
-      }
-    } else if (isFile) {
-      const ext = getFileExt(entry.name);
-      if (config.ignoredFiletypes.has(ext)) continue;
-
-      try {
-        const stat = await fs.stat(fullPath);
-        files.push({
-          name: entry.name,
-          ext,
-          size: stat.size,
-          sizeFormatted: formatFileSize(stat.size),
-          date: formatFileDate(stat.mtimeMs),
-        });
-      } catch {
-        // skip files we can't stat
-      }
+      const excluded = await fs
+        .access(path.join(fullPath, config.excludeMarker))
+        .then(
+          () => true,
+          () => false,
+        );
+      if (!excluded) folders.push({ name: entry.name });
+      return;
     }
-  }
 
-  folders.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-  );
-  files.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-  );
+    if (!isFile) return;
+
+    const ext = getFileExt(entry.name);
+    if (config.ignoredFiletypes.has(ext)) return;
+
+    try {
+      const stat = await fs.stat(fullPath);
+      files.push({
+        name: entry.name,
+        ext,
+        size: stat.size,
+        sizeFormatted: formatFileSize(stat.size),
+        date: formatFileDate(stat.mtimeMs),
+      });
+    } catch {
+      // skip files we can't stat
+    }
+  });
+
+  folders.sort(byName);
+  files.sort(byName);
 
   const filetypes = [
     ...new Set(files.map((f) => f.ext).filter(Boolean)),
@@ -204,11 +221,9 @@ function buildArchiveTree(entries) {
   }
 
   const dirs = [...dirSet]
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .sort(collator.compare)
     .map((p) => ({ path: p, name: p }));
-  files.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-  );
+  files.sort(byName);
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 

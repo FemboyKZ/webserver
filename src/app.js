@@ -169,6 +169,25 @@ async function buildAssetVersions(dir, prefix = "") {
 await buildAssetVersions(publicDir);
 env.addGlobal("assetV", (file) => assetVersions.get(file) || "");
 
+const dirListingCache = new Map();
+const DIR_CACHE_TTL = 10_000;
+const DIR_CACHE_MAX = 500;
+
+async function getDirectoryListing(realPath, mtimeMs) {
+  const now = Date.now();
+  const hit = dirListingCache.get(realPath);
+  if (hit && hit.mtimeMs === mtimeMs && now - hit.at < DIR_CACHE_TTL) {
+    return hit.value;
+  }
+
+  const value = await readDirectory(realPath);
+  dirListingCache.set(realPath, { value, mtimeMs, at: now });
+  if (dirListingCache.size > DIR_CACHE_MAX) {
+    dirListingCache.delete(dirListingCache.keys().next().value);
+  }
+  return value;
+}
+
 // Archive content cache (sha256 → entries), persisted to disk
 const archiveCacheDir = path.join(__dirname, "..", ".cache", "archives");
 await fs.mkdir(archiveCacheDir, { recursive: true });
@@ -268,8 +287,10 @@ app.get("/{*splat}", async (req, res) => {
     }
 
     // Check if path is a file — preview or serve
+    let dirMtimeMs = 0;
     try {
       const stat = await fs.stat(realPath);
+      dirMtimeMs = stat.mtimeMs;
       if (stat.isFile()) {
         // Raw download via ?raw=1 or non-browser clients (wget, curl, game engines, etc.)
         // Skip when ?file= is present (archive entry requests handled below)
@@ -578,7 +599,10 @@ app.get("/{*splat}", async (req, res) => {
       });
     }
 
-    const { folders, files, filetypes } = await readDirectory(realPath);
+    const { folders, files, filetypes } = await getDirectoryListing(
+      realPath,
+      dirMtimeMs,
+    );
 
     // Filetype filter via query param
     const filetype = req.query.type?.toLowerCase() || null;

@@ -52,7 +52,7 @@
             <br>
         {% endif %}
         {% for folder in folders %}
-            <li><a href="{{ currentPath }}{{ folder.name | urlencode }}/">[{{ folder.name }}]</a></li>
+            <li><a href="{{ folder.name | urlencode }}/">[{{ folder.name }}]</a></li>
         {% endfor %}
         {% if folderCount >= minFoldersForNav %}
             {% if not isRoot %}
@@ -77,7 +77,7 @@
     </nav>
     <ul id="file-list">
 {%- for file in files %}
-<li data-name="{{ file.name | lower }}" data-size="{{ file.size }}" data-date="{{ file.date }}"><span class="file-size">[{{ file.sizeFormatted }}]</span> <span class="file-date">{{ file.date }}</span> <a href="{{ currentPath }}{{ file.name | urlencode }}">{{ file.name }}</a> <a class="file-download" href="{{ currentPath }}{{ file.name | urlencode }}?raw=1" download="{{ file.name }}" title="Download {{ file.name }}" aria-label="Download {{ file.name }}">[&#8595;]</a></li>
+<li data-size="{{ file.size }}" data-date="{{ file.date }}"><span class="file-size">[{{ file.sizeFormatted }}]</span><span class="file-date">{{ file.date }}</span><a href="{{ file.name | urlencode }}">{{ file.name }}</a><a class="file-download" href="{{ file.name | urlencode }}?raw=1" download aria-label="Download {{ file.name }}">[&#8595;]</a></li>
 {%- endfor %}
     </ul>
     {% if totalCount >= minFilesForNav %}

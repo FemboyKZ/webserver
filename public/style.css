@@ -38,9 +38,10 @@ ul {
   margin: 0;
 }
 li {
-  display: flex;
-  align-items: center;
   margin-bottom: 5px;
+}
+.is-hidden {
+  display: none;
 }
 .file-size {
   display: inline-block;

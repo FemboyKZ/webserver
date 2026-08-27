@@ -54,7 +54,7 @@
     </nav>
     <ul id="file-list">
 {%- for file in files %}
-<li data-name="{{ file.name | lower }}" data-size="{{ file.size }}" data-date="{{ file.date }}"><span class="file-size">[{{ file.sizeFormatted }}]</span> <span class="file-date">{{ file.date }}</span> <a href="{{ currentPath }}?file={{ file.name | urlencode }}">{{ file.name }}</a></li>
+<li data-size="{{ file.size }}" data-date="{{ file.date }}"><span class="file-size">[{{ file.sizeFormatted }}]</span><span class="file-date">{{ file.date }}</span><a href="?file={{ file.name | urlencode }}">{{ file.name }}</a></li>
 {%- endfor %}
     </ul>
     {% endif %}
