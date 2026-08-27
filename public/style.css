@@ -58,6 +58,10 @@ li {
   color: rgb(255, 150, 200);
   white-space: pre;
 }
+.file-download {
+  margin-left: 8px;
+  color: rgb(255, 150, 200);
+}
 .sort-controls {
   margin-bottom: 10px;
 }
