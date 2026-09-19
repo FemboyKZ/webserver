@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "7zip-min": "^3.0.1",
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "compression": "^1.8.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
