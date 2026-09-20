@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "7zip-min": "^3.0.1",
-    "adm-zip": "^0.6.0",
-    "compression": "^1.8.1",
+    "adm-zip": "^0.6.1",
+    "compression": "^1.8.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "nunjucks": "^3.2.4",
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.9.1",
-    "prettier": "^3.9.6"
+    "eslint": "^10.10.0",
+    "prettier": "^3.9.7"
   }
 }
